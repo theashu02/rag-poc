@@ -1,5 +1,5 @@
 {
-  "name": "my-monorepo",
+  "name": "rag-poc",
   "private": true,
   "scripts": {
     "build": "turbo run build",
