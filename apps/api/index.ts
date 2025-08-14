@@ -57,14 +57,6 @@ app.post("/api/v1/query", async (req, res) => {
       // namespace: namespace || undefined,
     });
 
-    // const matches = result.matches ?? [];
-    // const answer = matches
-    //   .map((m) => {
-    //     const md = (m.metadata ?? {}) as Record<string, any>;
-    //     return md.text || md.content || md.pageContent || "";
-    //   })
-    //   .filter(Boolean)
-    //   .join("\n\n");
     const matches = result.matches ?? [];
     const answer = matches
       .map((m) => {

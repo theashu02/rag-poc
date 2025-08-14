@@ -1,18 +1,8 @@
-# Core dependencies
-openai>=1.50.0
-pinecone-client>=5.0.0
-python-dotenv>=1.0.0
-
-# LangChain text splitting (latest)
-langchain-text-splitters>=0.3.0
-
-# Optional: If you want the full LangChain ecosystem (not required for this script)
-# langchain>=0.3.0
-# langchain-community>=0.3.0
-# langchain-openai>=0.2.0
-
-# Standard library dependencies (usually pre-installed)
-# hashlib - built-in
-# json - built-in  
-# os - built-in
-# time - built-in
+langchain-text-splitters
+openai>=1.0.0
+pinecone-client>=3.0.0
+python-dotenv
+pandas
+spacy
+yake
+tiktoken
