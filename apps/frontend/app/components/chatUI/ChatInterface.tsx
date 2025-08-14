@@ -1,104 +1,172 @@
-"use client"
+"use client";
 
-import { useEffect, useRef, useState } from "react"
-import { useChatStore } from "@/store/chat-store"
-import { MessageBubble } from "./MessageBubble"
-import { ChatInput } from "./ChatInput"
-import { Button } from "@/components/ui/button"
-import { Trash2, MessageSquare } from "lucide-react"
+import { useEffect, useRef, useState } from "react";
+import { useChatStore } from "@/store/chat-store";
+import { MessageBubble } from "./MessageBubble";
+import { ChatInput } from "./ChatInput";
+import { Button } from "@/components/ui/button";
+
+import {
+  Trash2,
+  MessageSquare,
+  Sparkles,
+  Zap,
+  Brain,
+  Lightbulb,
+} from "lucide-react";
 
 export function ChatInterface() {
-  const { messages, isLoading, error, typingMessageId, sendMessage, clearMessages } = useChatStore()
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [pendingResponse, setPendingResponse] = useState<string>("")
+  const {
+    messages,
+    isLoading,
+    error,
+    typingMessageId,
+    sendMessage,
+    clearMessages,
+  } = useChatStore();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [pendingResponse, setPendingResponse] = useState<string>("");
 
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom with smooth behavior
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   // Handle API response for typing animation
   useEffect(() => {
     if (typingMessageId && !pendingResponse) {
-      // Simulate getting response - replace with your actual API integration
       const simulateResponse = async () => {
-        // This would be your actual API response
         const mockResponse =
-          "This is a simulated response that will be typed out character by character to create a smooth, professional chat experience similar to ChatGPT, Claude, and Gemini. The typing animation makes the interaction feel more natural and engaging for users."
-        setPendingResponse(mockResponse)
-      }
+          "I'm here to help you with anything you need! Whether it's answering questions, brainstorming ideas, solving problems, or having a thoughtful conversation, I'm designed to provide helpful, accurate, and engaging responses. What would you like to explore together?";
+        setPendingResponse(mockResponse);
+      };
 
-      const timer = setTimeout(simulateResponse, 500)
-      return () => clearTimeout(timer)
+      const timer = setTimeout(simulateResponse, 800);
+      return () => clearTimeout(timer);
     }
-  }, [typingMessageId, pendingResponse])
+  }, [typingMessageId, pendingResponse]);
 
   const handleSendMessage = async (content: string) => {
-    setPendingResponse("")
+    setPendingResponse("");
     try {
-      const result = await sendMessage(content)
-      setPendingResponse(result.content)
+      const result = await sendMessage(content);
+      setPendingResponse(result.content);
     } catch (error) {
-      console.error("Failed to send message:", error)
+      console.error("Failed to send message:", error);
     }
-  }
+  };
 
   const handleClearChat = () => {
-    clearMessages()
-    setPendingResponse("")
-  }
+    clearMessages();
+    setPendingResponse("");
+  };
+
+  const suggestedPrompts = [
+    {
+      icon: Brain,
+      text: "Explain quantum computing",
+      color: "from-purple-500 to-violet-600",
+    },
+    {
+      icon: Lightbulb,
+      text: "Help me brainstorm ideas",
+      color: "from-amber-500 to-orange-600",
+    },
+    {
+      icon: Sparkles,
+      text: "Write a creative story",
+      color: "from-pink-500 to-rose-600",
+    },
+    {
+      icon: Zap,
+      text: "Analyze this problem",
+      color: "from-blue-500 to-indigo-600",
+    },
+  ];
 
   return (
-    <div className="flex flex-col h-screen min-w-5xl bg-gray-50 dark:bg-gray-900">
+    <div className="flex flex-col h-screen w-screen bg-gradient-to-br from-background via-card to-background">
       {/* Header */}
-      <div className="border-b bg-white dark:bg-gray-800 px-4 py-3">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
-              <MessageSquare className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <h1 className="font-semibold text-gray-900 dark:text-gray-100">AI Assistant</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Always here to help</p>
-            </div>
-          </div>
-
-          {messages.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClearChat}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Clear
-            </Button>
-          )}
-        </div>
+      <div className="absolute top-16 right-6">
+        {messages.length > 0 && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleClearChat}
+            className="text-[#f4f4f4] hover:text-gray-300 hover:bg-muted rounded-lg transition-all duration-200"
+          >
+            <Trash2 className="w-4 h-4 mr-1" />
+            Clear Chat
+          </Button>
+        )}
       </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto">
         {messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center max-w-md mx-auto px-4">
-              <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center mx-auto mb-4">
-                <MessageSquare className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+          <div className="flex items-center justify-center h-full p-6">
+            <div className="text-center max-w-2xl mx-auto">
+              <div className="relative mb-8">
+                <div className="w-24 h-24 rounded-3xl bg-stone-800 flex items-center justify-center mx-auto shadow-2xl">
+                  <MessageSquare className="w-12 h-12" />
+                </div>
               </div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Start a conversation</h2>
-              <p className="text-gray-500 dark:text-gray-400">
-                Ask me anything! I'm here to help with your questions and tasks.
+
+              <h2 className="text-4xl font-bold mb-4">
+                Welcome to AI Assistant
+              </h2>
+              <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
+                Experience the future of communication with our advanced AI chat
+                interface, designed to make every interaction seamless and
+                intuitive.
               </p>
+
+              {/* Suggested Prompts */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                {suggestedPrompts.map((prompt, index) => {
+                  const IconComponent = prompt.icon;
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => handleSendMessage(prompt.text)}
+                      className="group p-5 text-left bg-card rounded-2xl border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300 hover:scale-105 hover:-translate-y-1"
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <div
+                          className={`w-8 h-8 rounded-lg bg-gradient-to-r ${prompt.color} flex items-center justify-center shadow-sm`}
+                        >
+                          <IconComponent className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                          {prompt.text}
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Click to start this conversation
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-8">
+                <p className="text-sm text-muted-foreground">
+                  Or type your own message below to get started
+                </p>
+              </div>
             </div>
           </div>
         ) : (
-          <div className="py-4">
+          <div className="py-6">
             {messages.map((message) => (
-              <MessageBubble
-                key={message.id}
-                message={message}
-                responseContent={message.id === typingMessageId ? pendingResponse : undefined}
-              />
+              <div key={message.id} className="message-slide-in">
+                <MessageBubble
+                  message={message}
+                  responseContent={
+                    message.id === typingMessageId ? pendingResponse : undefined
+                  }
+                />
+              </div>
             ))}
             <div ref={messagesEndRef} />
           </div>
@@ -106,16 +174,20 @@ export function ChatInterface() {
 
         {/* Error Display */}
         {error && (
-          <div className="max-w-4xl mx-auto px-4 py-2">
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          <div className="max-w-4xl mx-auto px-6 py-2">
+            <div className="bg-destructive/10 border border-destructive/20 rounded-2xl p-4 backdrop-blur-sm">
+              <p className="text-sm text-destructive font-medium">{error}</p>
             </div>
           </div>
         )}
       </div>
 
       {/* Input */}
-      <ChatInput onSend={handleSendMessage} disabled={isLoading} placeholder="Type your message..." />
+      <ChatInput
+        onSend={handleSendMessage}
+        disabled={isLoading}
+        placeholder="Ask me anything..."
+      />
     </div>
-  )
+  );
 }
