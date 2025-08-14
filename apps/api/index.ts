@@ -54,14 +54,22 @@ app.post("/api/v1/query", async (req, res) => {
       vector,
       topK: Math.min(Math.max(1, Number(topK) || 5), 20),
       includeMetadata: true,
-      namespace: namespace || undefined,
+      // namespace: namespace || undefined,
     });
 
+    // const matches = result.matches ?? [];
+    // const answer = matches
+    //   .map((m) => {
+    //     const md = (m.metadata ?? {}) as Record<string, any>;
+    //     return md.text || md.content || md.pageContent || "";
+    //   })
+    //   .filter(Boolean)
+    //   .join("\n\n");
     const matches = result.matches ?? [];
     const answer = matches
       .map((m) => {
         const md = (m.metadata ?? {}) as Record<string, any>;
-        return md.text || md.content || md.pageContent || "";
+        return md.text ?? md.content ?? md.pageContent ?? md.page_content ?? "";
       })
       .filter(Boolean)
       .join("\n\n");
