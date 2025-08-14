@@ -1,5 +1,6 @@
 import { create } from "zustand"
 import { devtools, persist } from "zustand/middleware"
+import api from "@/lib/axios"
 
 export interface Message {
   id: string
@@ -89,23 +90,19 @@ export const useChatStore = create<ChatState & ChatActions>()(
           setTypingMessageId(assistantMessage.id)
 
           try {
-            // Simulate realistic API response with delay
-            await new Promise((resolve) => setTimeout(resolve, 800))
-
-            const mockResponses = [
-              "I understand your question. Let me provide you with a comprehensive answer that demonstrates the smooth typing animation feature you requested.",
-              "This is a demonstration of the modern chat interface with smooth typing animations, similar to ChatGPT, Claude, and Gemini. The response appears character by character for a natural conversation flow.",
-              "Great question! I'm here to help you with any queries you might have. This interface handles large responses gracefully and maintains smooth performance even with extensive conversations.",
-              "The chat interface now uses Zustand for lightweight state management, providing excellent performance and developer experience. All responses are handled smoothly with proper error handling and typing animations.",
-              "This modern chat interface includes features like auto-scrolling, responsive design, dark mode support, and industry-standard UX patterns. Feel free to ask me anything!",
-            ]
-
-            const randomResponse = mockResponses[Math.floor(Math.random() * mockResponses.length)]
+            const res = await api.post("/api/v1/query", { query: content })
+            const payload = res?.data
+            const answer =
+              (payload?.answer ??
+                payload?.response ??
+                payload?.message ??
+                (typeof payload === "string" ? payload : JSON.stringify(payload))) || "No response."
 
             set({ isLoading: false })
-            return { messageId: assistantMessage.id, content: randomResponse }
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Failed to send message"
+            return { messageId: assistantMessage.id, content: answer }
+          } catch (error: any) {
+            const errorMessage =
+              error?.response?.data?.message ?? error?.message ?? "Failed to send message"
 
             set((state) => ({
               isLoading: false,

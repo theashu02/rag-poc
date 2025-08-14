@@ -5,25 +5,10 @@ import { useChatStore } from "@/store/chat-store";
 import { MessageBubble } from "./MessageBubble";
 import { ChatInput } from "./ChatInput";
 import { Button } from "@/components/ui/button";
-
-import {
-  Trash2,
-  MessageSquare,
-  Sparkles,
-  Zap,
-  Brain,
-  Lightbulb,
-} from "lucide-react";
+import { Trash2, MessageSquare, Sparkles, Zap, Brain, Lightbulb } from "lucide-react";
 
 export function ChatInterface() {
-  const {
-    messages,
-    isLoading,
-    error,
-    typingMessageId,
-    sendMessage,
-    clearMessages,
-  } = useChatStore();
+  const { messages, isLoading, error, typingMessageId, sendMessage, clearMessages } = useChatStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [pendingResponse, setPendingResponse] = useState<string>("");
 
@@ -32,27 +17,13 @@ export function ChatInterface() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Handle API response for typing animation
-  useEffect(() => {
-    if (typingMessageId && !pendingResponse) {
-      const simulateResponse = async () => {
-        const mockResponse =
-          "I'm here to help you with anything you need! Whether it's answering questions, brainstorming ideas, solving problems, or having a thoughtful conversation, I'm designed to provide helpful, accurate, and engaging responses. What would you like to explore together?";
-        setPendingResponse(mockResponse);
-      };
-
-      const timer = setTimeout(simulateResponse, 800);
-      return () => clearTimeout(timer);
-    }
-  }, [typingMessageId, pendingResponse]);
-
   const handleSendMessage = async (content: string) => {
     setPendingResponse("");
     try {
       const result = await sendMessage(content);
       setPendingResponse(result.content);
     } catch (error) {
-      console.error("Failed to send message:", error);
+      // error is already handled in the store and UI, keep UI stable
     }
   };
 

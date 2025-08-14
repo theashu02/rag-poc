@@ -4,7 +4,7 @@ import type React from "react";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Square, Paperclip, Mic, Plus } from "lucide-react";
+import { SendHorizontal , Square, Paperclip, Mic, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
@@ -100,7 +100,7 @@ export function ChatInput({
             size="sm"
             className={cn(
               "h-[60px] w-[60px] rounded-2xl shrink-0 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105",
-              "bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90",
+              "bg-stone-900 border-4 text-[#f4f4f4] hover:bg-stone-800/90 hover:text-blue-100",
               "disabled:from-muted disabled:to-muted disabled:text-muted-foreground",
               "disabled:shadow-none disabled:hover:scale-100"
             )}
@@ -108,7 +108,7 @@ export function ChatInput({
             {disabled ? (
               <Square className="w-5 h-5" />
             ) : (
-              <Send className="w-5 h-5" />
+              <SendHorizontal className="w-5 h-5"/>
             )}
           </Button>
         </div>
