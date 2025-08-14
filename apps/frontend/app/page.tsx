@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import api from "@/lib/axios";
-import Chat from "./components/Chat";
+// import Chat from "./components/Chat";
+import { ChatInterface } from "./components/chatUI/ChatInterface";
 
 export default function Home() {
 	const [health, setHealth] = useState<string | null>(null);
@@ -24,7 +25,7 @@ export default function Home() {
 	};
 
 	return (
-		<div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
+		<div className="font-sans grid items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
 			<div className="flex flex-col items-center gap-4">
 				<Button onClick={checkHealth} disabled={loading}>
 					{loading ? "Checking..." : "Check API Health"}
@@ -32,8 +33,9 @@ export default function Home() {
 				{health && <p className="text-green-600">Health: {health}</p>}
 				{error && <p className="text-red-600">Error: {error}</p>}
 			</div>
-			<div className="flex flex-col items-center gap-4">
-				<Chat />
+			<div className="flex flex-col items-center gap-4 w-5xl bg-red-300">
+				{/* <Chat /> */}
+				<ChatInterface />
 			</div>
 		</div>
 	);
