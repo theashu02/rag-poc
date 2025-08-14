@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import api from "@/lib/axios";
+import Chat from "./components/Chat";
 
 export default function Home() {
 	const [health, setHealth] = useState<string | null>(null);
@@ -30,6 +31,9 @@ export default function Home() {
 				</Button>
 				{health && <p className="text-green-600">Health: {health}</p>}
 				{error && <p className="text-red-600">Error: {error}</p>}
+			</div>
+			<div className="flex flex-col items-center gap-4">
+				<Chat />
 			</div>
 		</div>
 	);
