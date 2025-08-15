@@ -1,8 +1,30 @@
+# For the previous script
+# langchain-text-splitters
+# openai>=1.0.0
+# pinecone-client>=3.0.0
+# python-dotenv
+# pandas
+# spacy
+# yake
+# tiktoken
+
+
+
+# For the new script 
+keybert
+sentence-transformers
+rank-bm25
+scikit-learn
+nltk
+PyPDF2
+pdfplumber
+chardet
+joblib
+spacy
 langchain-text-splitters
 openai>=1.0.0
 pinecone-client>=3.0.0
 python-dotenv
 pandas
-spacy
 yake
 tiktoken
