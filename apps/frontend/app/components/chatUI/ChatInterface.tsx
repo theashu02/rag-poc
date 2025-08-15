@@ -84,12 +84,10 @@ export function ChatInterface() {
               </div>
 
               <h2 className="text-4xl font-bold mb-4">
-                Welcome to AI Assistant
+                Welcome to Your Knowledge-Powered AI Assistant
               </h2>
               <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-                Experience the future of communication with our advanced AI chat
-                interface, designed to make every interaction seamless and
-                intuitive.
+                Harness the power of Retrieval-Augmented Generation to get precise, trustworthy answers from your own data—instantly and effortlessly.
               </p>
 
               {/* Suggested Prompts */}
@@ -118,12 +116,6 @@ export function ChatInterface() {
                     </button>
                   );
                 })}
-              </div>
-
-              <div className="mt-8">
-                <p className="text-sm text-muted-foreground">
-                  Or type your own message below to get started
-                </p>
               </div>
             </div>
           </div>
@@ -157,7 +149,7 @@ export function ChatInterface() {
       <ChatInput
         onSend={handleSendMessage}
         disabled={isLoading}
-        placeholder="Ask me anything..."
+        placeholder="Your documents. Your data. Instant insights..."
       />
     </div>
   );

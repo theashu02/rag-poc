@@ -2,9 +2,8 @@ import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
 import { Pinecone } from "@pinecone-database/pinecone";
-import { performance } from "perf_hooks";                  //  ← new
+import { performance } from "perf_hooks";
 
-/* ---------- ENV & APP SET-UP ---------- */
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -23,7 +22,6 @@ const index = pinecone.Index(PINECONE_INDEX);
 app.use(cors({ origin: "http://localhost:3000" }));
 app.use(express.json());
 
-/* ---------- SMALL UTILS ---------- */
 type SourceInfo = {
   id: string;
   score: number;
@@ -33,7 +31,7 @@ type SourceInfo = {
   entities?: string[];
 };
 
-const CONTEXT_WINDOW_CHARS = 16_000;         // ≈ 8k tokens
+const CONTEXT_WINDOW_CHARS = 16_000;         // = 8000 tokens
 
 async function embed(text: string): Promise<number[]> {
   const { data } = await openai.embeddings.create({
@@ -59,7 +57,7 @@ async function queryEngine(
 }> {
   const t0 = performance.now();
 
-  /* ----- dense retrieval ------------------------------------------------ */
+  /* dense retrieval */
   const queryVector = await embed(question);
   const results = await index.query({
     vector: queryVector,
@@ -79,7 +77,7 @@ async function queryEngine(
     };
   }
 
-  /* ----- context assembly ---------------------------------------------- */
+  /* context assembly */
   const contextParts: string[] = [];
   const sources: SourceInfo[] = [];
   let charCount = 0;
@@ -108,7 +106,7 @@ async function queryEngine(
   }
   const context = contextParts.join("\n\n");
 
-  /* ----- final LLM answer ---------------------------------------------- */
+  /* final LLM answer */
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     temperature: 0.3,
@@ -269,6 +267,10 @@ app.post("/api/v1/query", async (req, res) => {
   }
 });
 
+/* =========================================================
+   -- For offline testing purpose only
+   ========================================================= */
+
 /* Retrieval-quality evaluation */
 app.post("/api/v1/evaluate/retrieval", async (req, res) => {
   try {
@@ -293,6 +295,5 @@ app.post("/api/v1/evaluate/answer", async (req, res) => {
   }
 });
 
-/* ---------- LAUNCH ---------- */
 app.listen(PORT);
 console.log(`API server listening on port ${PORT}`);

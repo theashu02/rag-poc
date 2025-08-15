@@ -35,34 +35,27 @@ nltk.download('averaged_perceptron_tagger', quiet=True)
 
 load_dotenv()
 
-# === ENHANCED CONFIG ===
 @dataclass
 class RAGConfig:
-    # API Keys
     openai_api_key: str = os.getenv("OPENAI_API_KEY")
     pinecone_api_key: str = os.getenv("PINECONE_API_KEY")
     
-    # Index Settings
     index_name: str = os.getenv("PINECONE_INDEX")
     namespace_dense: str = "dense_vectors"
     namespace_sparse: str = "sparse_vectors"
     
-    # Paths
     data_folder: str = os.getenv("DATA_DIR")
     cache_dir: str = os.getenv("CACHE_DIR", "./cache")
     
-    # Model Settings
-    embedding_model: str = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-large")
+    embedding_model: str = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
     reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-12-v2"
     keyword_model: str = "all-MiniLM-L6-v2"
     
-    # Processing Settings
     chunk_size: int = 800
     chunk_overlap: int = 150
     batch_size: int = int(os.getenv("BATCH_SIZE", "50"))
     max_workers: int = 4
     
-    # Retrieval Settings
     initial_retrieval_k: int = 100
     rerank_k: int = 30
     final_k: int = 10
@@ -73,10 +66,7 @@ config = RAGConfig()
 # === INITIALIZATION ===
 print("Initializing models and connections...")
 
-# OpenAI Client
 client = OpenAI(api_key=config.openai_api_key)
-
-# Pinecone
 pc = Pinecone(api_key=config.pinecone_api_key)
 
 # NLP Models
@@ -132,7 +122,7 @@ def setup_pinecone_index():
 
 index = setup_pinecone_index()
 
-# === DOCUMENT READERS WITH PDF SUPPORT ===
+# === DOCUMENT READERS ===
 def detect_encoding(file_path):
     """Detect file encoding"""
     with open(file_path, 'rb') as f:
@@ -839,247 +829,14 @@ def process_directory_parallel(directory: str):
     
     return total_uploaded
 
-# === QUERY INTERFACE ===
-class RAGQueryEngine:
-    """High-level interface for querying the RAG system"""
-    
-    def __init__(self):
-        self.search_engine = search_engine
-        self.context_window = 8000  # tokens for context
-        
-    def query(self, question: str, return_sources: bool = True) -> Dict[str, Any]:
-        """
-        Execute a RAG query with all optimizations
-        
-        Args:
-            question: The user's question
-            return_sources: Whether to return source documents
-            
-        Returns:
-            Dictionary with answer, sources, and metadata
-        """
-        start_time = time.time()
-        
-        # 1. Retrieve relevant documents
-        print(f"\nSearching for: {question}")
-        results = self.search_engine.search(question)
-        
-        if not results:
-            return {
-                "answer": "I couldn't find relevant information to answer your question.",
-                "sources": [],
-                "search_time": time.time() - start_time
-            }
-        
-        # 2. Build context from retrieved documents
-        context_parts = []
-        sources = []
-        total_tokens = 0
-        
-        for i, result in enumerate(results):
-            chunk_text = result["text"]
-            chunk_tokens = chunker.token_length(chunk_text)
-            
-            # Check if we have room for this chunk
-            if total_tokens + chunk_tokens > self.context_window:
-                break
-            
-            context_parts.append(f"[Document {i+1}]\n{chunk_text}")
-            total_tokens += chunk_tokens
-            
-            # Collect source information
-            if return_sources:
-                sources.append({
-                    "source": result["metadata"].get("source", "Unknown"),
-                    "chunk_index": result["metadata"].get("chunk_index", 0),
-                    "relevance_score": result.get("rerank_score", result.get("score", 0)),
-                    "summary": result["metadata"].get("chunk_summary", ""),
-                    "entities": result["metadata"].get("chunk_entities", [])
-                })
-        
-        context = "\n\n".join(context_parts)
-        
-        # 3. Generate answer using GPT-4
-        try:
-            response = client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": """You are a helpful assistant that answers questions based on the provided context. 
-                        Follow these guidelines:
-                        1. Answer based ONLY on the information in the context
-                        2. If the context doesn't contain enough information, say so
-                        3. Be concise but comprehensive
-                        4. Cite document numbers when referencing specific information"""
-                    },
-                    {
-                        "role": "user",
-                        "content": f"Context:\n{context}\n\nQuestion: {question}\n\nAnswer:"
-                    }
-                ],
-                temperature=0.3,
-                max_tokens=1000
-            )
-            
-            answer = response.choices[0].message.content.strip()
-            
-        except Exception as e:
-            answer = f"Error generating answer: {str(e)}"
-        
-        # 4. Prepare response
-        search_time = time.time() - start_time
-        
-        return {
-            "answer": answer,
-            "sources": sources,
-            "search_time": search_time,
-            "documents_used": len(context_parts),
-            "total_retrieved": len(results),
-            "context_tokens": total_tokens
-        }
-    
-    def query_with_feedback(self, question: str, feedback_callback=None) -> Dict[str, Any]:
-        """Query with option for relevance feedback"""
-        result = self.query(question)
-        
-        if feedback_callback:
-            # Collect feedback on the answer
-            feedback = feedback_callback(result)
-            
-            # Store feedback for future improvements
-            self.store_feedback(question, result, feedback)
-        
-        return result
-    
-    def store_feedback(self, question: str, result: Dict, feedback: Dict):
-        """Store feedback for continuous improvement"""
-        feedback_data = {
-            "timestamp": time.time(),
-            "question": question,
-            "answer": result["answer"],
-            "relevance_score": feedback.get("relevance", 0),
-            "helpful": feedback.get("helpful", False),
-            "sources_accurate": feedback.get("sources_accurate", False)
-        }
-        
-        # Save to feedback file
-        feedback_file = os.path.join(config.cache_dir, "feedback.jsonl")
-        with open(feedback_file, "a") as f:
-            f.write(json.dumps(feedback_data) + "\n")
-
-# === EVALUATION METRICS ===
-class RAGEvaluator:
-    """Evaluate RAG system performance"""
-    
-    def __init__(self):
-        self.query_engine = RAGQueryEngine()
-    
-    def evaluate_retrieval_quality(self, test_queries: List[Dict]) -> Dict:
-        """
-        Evaluate retrieval quality with test queries
-        
-        Args:
-            test_queries: List of dicts with 'question' and 'expected_sources'
-        """
-        metrics = {
-            "precision_at_k": [],
-            "recall_at_k": [],
-            "mrr": [],  # Mean Reciprocal Rank
-            "avg_response_time": []
-        }
-        
-        for test_case in test_queries:
-            question = test_case["question"]
-            expected = set(test_case.get("expected_sources", []))
-            
-            # Get results
-            result = self.query_engine.query(question)
-            retrieved = set([s["source"] for s in result["sources"]])
-            
-            # Calculate metrics
-            if expected:
-                precision = len(expected & retrieved) / len(retrieved) if retrieved else 0
-                recall = len(expected & retrieved) / len(expected) if expected else 0
-                
-                metrics["precision_at_k"].append(precision)
-                metrics["recall_at_k"].append(recall)
-            
-            metrics["avg_response_time"].append(result["search_time"])
-        
-        # Calculate averages
-        return {
-            "avg_precision": np.mean(metrics["precision_at_k"]) if metrics["precision_at_k"] else 0,
-            "avg_recall": np.mean(metrics["recall_at_k"]) if metrics["recall_at_k"] else 0,
-            "avg_response_time": np.mean(metrics["avg_response_time"]),
-            "total_queries": len(test_queries)
-        }
-    
-    def evaluate_answer_quality(self, test_cases: List[Dict]) -> Dict:
-        """Evaluate answer quality using LLM-as-judge"""
-        scores = []
-        
-        for test in test_cases:
-            question = test["question"]
-            expected_answer = test.get("expected_answer", "")
-            
-            # Get RAG answer
-            result = self.query_engine.query(question)
-            generated_answer = result["answer"]
-            
-            # Use GPT-4 to evaluate
-            try:
-                eval_response = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": """Evaluate the quality of the generated answer compared to the expected answer.
-                            Score from 1-5:
-                            1 = Completely wrong or irrelevant
-                            2 = Partially correct but missing key information
-                            3 = Mostly correct with minor issues
-                            4 = Correct and comprehensive
-                            5 = Perfect answer with all relevant details
-                            
-                            Return only the numeric score."""
-                        },
-                        {
-                            "role": "user",
-                            "content": f"""Question: {question}
-                            
-                            Expected Answer: {expected_answer}
-                            
-                            Generated Answer: {generated_answer}
-                            
-                            Score:"""
-                        }
-                    ],
-                    temperature=0,
-                    max_tokens=10
-                )
-                
-                score = int(eval_response.choices[0].message.content.strip())
-                scores.append(score)
-                
-            except:
-                scores.append(0)
-        
-        return {
-            "avg_quality_score": np.mean(scores) if scores else 0,
-            "score_distribution": dict(zip(*np.unique(scores, return_counts=True))) if scores else {},
-            "total_evaluated": len(scores)
-        }
 
 # === MAIN EXECUTION ===
 if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(description="Enhanced RAG Pipeline")
-    parser.add_argument("--mode", choices=["index", "query", "evaluate"], 
+    parser.add_argument("--mode", choices=["index"], 
                        default="index", help="Operation mode")
-    parser.add_argument("--question", type=str, help="Question for query mode")
-    parser.add_argument("--eval-file", type=str, help="JSON file with test cases for evaluation")
     
     args = parser.parse_args()
     
@@ -1097,76 +854,6 @@ if __name__ == "__main__":
         print(f"\nTotal processing time: {time.time() - start_time:.2f} seconds")
         print(f"Embeddings cache saved to: {config.cache_dir}")
         
-    elif args.mode == "query":
-        # Query mode
-        if not args.question:
-            # Interactive mode
-            print("RAG Query Interface (type 'exit' to quit)")
-            print("-" * 50)
-            
-            query_engine = RAGQueryEngine()
-            
-            while True:
-                question = input("\nEnter your question: ").strip()
-                
-                if question.lower() == 'exit':
-                    break
-                
-                if not question:
-                    continue
-                
-                result = query_engine.query(question)
-                
-                print(f"\n{'='*50}")
-                print("ANSWER:")
-                print(result["answer"])
-                
-                print(f"\n{'='*50}")
-                print(f"Sources used: {result['documents_used']}")
-                print(f"Search time: {result['search_time']:.2f}s")
-                
-                if result["sources"]:
-                    print("\nTop sources:")
-                    for i, source in enumerate(result["sources"][:3]):
-                        print(f"  {i+1}. {source['source']} (relevance: {source['relevance_score']:.3f})")
-                        if source['entities']:
-                            print(f"     Entities: {', '.join(source['entities'][:5])}")
-        else:
-            # Single query
-            query_engine = RAGQueryEngine()
-            result = query_engine.query(args.question)
-            
-            print(f"\nQuestion: {args.question}")
-            print(f"\nAnswer: {result['answer']}")
-            print(f"\nSearch completed in {result['search_time']:.2f} seconds")
-            print(f"Documents used: {result['documents_used']}/{result['total_retrieved']}")
-    
-    elif args.mode == "evaluate":
-        # Evaluation mode
-        if not args.eval_file:
-            print("Please provide an evaluation file with --eval-file")
-        else:
-            print(f"Running evaluation from {args.eval_file}")
-            
-            with open(args.eval_file, 'r') as f:
-                test_cases = json.load(f)
-            
-            evaluator = RAGEvaluator()
-            
-            # Evaluate retrieval
-            if "retrieval_tests" in test_cases:
-                print("\nEvaluating retrieval quality...")
-                retrieval_metrics = evaluator.evaluate_retrieval_quality(test_cases["retrieval_tests"])
-                print(f"  Average Precision: {retrieval_metrics['avg_precision']:.3f}")
-                print(f"  Average Recall: {retrieval_metrics['avg_recall']:.3f}")
-                print(f"  Average Response Time: {retrieval_metrics['avg_response_time']:.2f}s")
-            
-            # Evaluate answer quality
-            if "answer_tests" in test_cases:
-                print("\nEvaluating answer quality...")
-                answer_metrics = evaluator.evaluate_answer_quality(test_cases["answer_tests"])
-                print(f"  Average Quality Score: {answer_metrics['avg_quality_score']:.2f}/5")
-                print(f"  Score Distribution: {answer_metrics['score_distribution']}")
     
     print("\n✨ Operation completed successfully!")
     

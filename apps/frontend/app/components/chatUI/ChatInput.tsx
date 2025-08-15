@@ -4,7 +4,7 @@ import type React from "react";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { SendHorizontal , Square, Paperclip, Mic, Plus } from "lucide-react";
+import { SendHorizontal , Square, ArrowUp, Paperclip, Mic, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
@@ -16,7 +16,7 @@ interface ChatInputProps {
 export function ChatInput({
   onSend,
   disabled = false,
-  placeholder = "Ask me anything...",
+  placeholder = "Your documents. Your data. Instant insights...",
 }: ChatInputProps) {
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -47,10 +47,10 @@ export function ChatInput({
 
   return (
     <div className="backdrop-blur-xl bg-card/80 border-t border-border/50 p-6 shadow-lg">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         <div className="relative flex items-end gap-4">
           <div className="flex-1 relative">
-            <div className="relative rounded-2xl bg-background border border-border shadow-lg hover:shadow-xl transition-all duration-200 hover:border-primary/30">
+            <div className="relative rounded-full bg-background border border-gray-800/90 shadow-lg hover:shadow-xl transition-all duration-200 hover:border-primary/30">
               <Textarea
                 ref={textareaRef}
                 value={input}
@@ -59,7 +59,7 @@ export function ChatInput({
                 placeholder={placeholder}
                 disabled={disabled}
                 className={cn(
-                  "min-h-[60px] max-h-[200px] resize-none border-0 bg-transparent rounded-2xl",
+                  "min-h-[60px] max-h-[200px] resize-none border-0 bg-transparent rounded-full",
                   "focus:ring-0 focus:outline-none",
                   "px-6 py-5 pr-32 text-[15px] leading-relaxed placeholder:text-muted-foreground",
                   "font-medium"
@@ -68,10 +68,12 @@ export function ChatInput({
               />
 
               {/* Action buttons */}
-              <div className="absolute right-3 bottom-3 flex items-center gap-1">
+              {/* for enabling this make the max-w-3xl in div to 4xl */}
+              {/* <div className="absolute right-3 bottom-3 flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="sm"
+                  disabled
                   className="h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200 hover:scale-105"
                 >
                   <Plus className="w-4 h-4" />
@@ -79,6 +81,7 @@ export function ChatInput({
                 <Button
                   variant="ghost"
                   size="sm"
+                  disabled
                   className="h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200 hover:scale-105"
                 >
                   <Paperclip className="w-4 h-4" />
@@ -86,11 +89,12 @@ export function ChatInput({
                 <Button
                   variant="ghost"
                   size="sm"
+                  disabled
                   className="h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200 hover:scale-105"
                 >
                   <Mic className="w-4 h-4" />
                 </Button>
-              </div>
+              </div> */}
             </div>
           </div>
 
@@ -99,16 +103,16 @@ export function ChatInput({
             disabled={disabled || !input.trim()}
             size="sm"
             className={cn(
-              "h-[60px] w-[60px] rounded-2xl shrink-0 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105",
+              "h-[60px] w-[60px] rounded-full shrink-0 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105",
               "bg-stone-900 border-4 text-[#f4f4f4] hover:bg-stone-800/90 hover:text-blue-100",
               "disabled:from-muted disabled:to-muted disabled:text-muted-foreground",
               "disabled:shadow-none disabled:hover:scale-100"
             )}
           >
             {disabled ? (
-              <Square className="w-5 h-5" />
+              <Square className="size-6" />
             ) : (
-              <SendHorizontal className="w-5 h-5"/>
+              <ArrowUp className="size-6" />
             )}
           </Button>
         </div>
