@@ -6,6 +6,7 @@ import { MessageBubble } from "./MessageBubble";
 import { ChatInput } from "./ChatInput";
 import { Button } from "@/components/ui/button";
 import { Trash2, MessageSquare, Sparkles, Zap, Brain, Lightbulb } from "lucide-react";
+import { ModeToggle } from "@/components/ThemeToggle";
 
 export function ChatInterface() {
   const { messages, isLoading, error, typingMessageId, sendMessage, clearMessages } = useChatStore();
@@ -58,7 +59,7 @@ export function ChatInterface() {
   return (
     <div className="flex flex-col h-screen w-screen bg-gradient-to-br from-background via-card to-background">
       {/* Header */}
-      <div className="absolute top-16 right-6">
+      <div className="flex flex-col absolute top-16 right-6 gap-3 z-50">
         {messages.length > 0 && (
           <Button
             variant="destructive"
@@ -66,10 +67,10 @@ export function ChatInterface() {
             onClick={handleClearChat}
             className="text-[#f4f4f4] hover:text-gray-300 hover:bg-muted rounded-lg transition-all duration-200"
           >
-            <Trash2 className="w-4 h-4 mr-1" />
-            Clear Chat
+            <Trash2 className="size-4" />
           </Button>
         )}
+        <ModeToggle />
       </div>
 
       {/* Messages */}
@@ -78,7 +79,7 @@ export function ChatInterface() {
           <div className="flex items-center justify-center h-full p-6">
             <div className="text-center max-w-2xl mx-auto">
               <div className="relative mb-8">
-                <div className="w-24 h-24 rounded-3xl bg-stone-800 flex items-center justify-center mx-auto shadow-2xl">
+                <div className="w-24 h-24 rounded-3xl dark:bg-stone-800 flex items-center justify-center mx-auto shadow-2xl">
                   <MessageSquare className="w-12 h-12" />
                 </div>
               </div>

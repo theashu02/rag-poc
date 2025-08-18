@@ -8,7 +8,6 @@ export default function Home() {
       <NetworkHealthBar />
       <HealthCheck />
       <div className="flex flex-col items-center gap-4 w-screen bg-red-300">
-        {/* <Chat /> */}
         <ChatInterface />
       </div>
     </div>

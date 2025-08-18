@@ -50,7 +50,7 @@ export function ChatInput({
       <div className="max-w-3xl mx-auto">
         <div className="relative flex items-end gap-4">
           <div className="flex-1 relative">
-            <div className="relative rounded-full bg-background border border-gray-800/90 shadow-lg hover:shadow-xl transition-all duration-200 hover:border-primary/30">
+            <div className="relative rounded-full bg-background border  dark:border-gray-800/90 shadow-sm dark:shadow-lg dark:hover:shadow-xl transition-all duration-200 hover:border-primary/30">
               <Textarea
                 ref={textareaRef}
                 value={input}
@@ -62,7 +62,7 @@ export function ChatInput({
                   "min-h-[60px] max-h-[200px] resize-none border-0 bg-transparent rounded-full",
                   "focus:ring-0 focus:outline-none",
                   "px-6 py-5 pr-32 text-[15px] leading-relaxed placeholder:text-muted-foreground",
-                  "font-medium"
+                  "font-normal"
                 )}
                 rows={1}
               />
