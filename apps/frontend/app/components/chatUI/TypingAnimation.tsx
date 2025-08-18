@@ -10,7 +10,7 @@ interface TypingAnimationProps {
   onComplete?: () => void
 }
 
-export function TypingAnimation({ messageId, content, speed = 30, onComplete }: TypingAnimationProps) {
+export function TypingAnimation({ messageId, content, speed = 60, onComplete }: TypingAnimationProps) {
   const [displayedContent, setDisplayedContent] = useState("")
   const [currentIndex, setCurrentIndex] = useState(0)
   const { updateMessageContent, setMessageComplete, setTypingMessageId } = useChatStore()

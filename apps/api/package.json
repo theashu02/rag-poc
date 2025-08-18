@@ -10,6 +10,7 @@
   "devDependencies": {
     "@types/bun": "latest",
     "@types/cors": "^2.8.17",
+    "@types/lru-cache": "^7.10.9",
     "nodemon": "^3.1.0"
   },
   "peerDependencies": {
@@ -22,6 +23,7 @@
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "keyword-extractor": "^0.0.28",
+    "lru-cache": "^11.1.0",
     "natural": "^8.1.0",
     "openai": "^5.12.2"
   }

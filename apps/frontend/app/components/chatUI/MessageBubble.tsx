@@ -56,7 +56,7 @@ export function MessageBubble({ message, responseContent }: MessageBubbleProps) 
             )}
           >
             {isTyping && responseContent ? (
-              <TypingAnimation messageId={message.id} content={responseContent} speed={25} />
+              <TypingAnimation messageId={message.id} content={responseContent} speed={10} />
             ) : (
               <div className="whitespace-pre-wrap break-words">
                 {message.content ||
