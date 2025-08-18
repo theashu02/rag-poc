@@ -437,55 +437,6 @@ class EmbeddingGenerator:
 
 embedder = EmbeddingGenerator()
 
-# === QUERY EXPANSION AND PROCESSING ===
-class QueryProcessor:
-    def expand_query_with_synonyms(self, query: str) -> str:
-        """Expand query with WordNet synonyms"""
-        tokens = nltk.word_tokenize(query.lower())
-        expanded_tokens = []
-        
-        for token in tokens:
-            expanded_tokens.append(token)
-            synsets = wordnet.synsets(token)
-            if synsets:
-                # Add first synonym from each synset
-                for synset in synsets[:2]:
-                    for lemma in synset.lemmas()[:2]:
-                        synonym = lemma.name().replace('_', ' ')
-                        if synonym != token:
-                            expanded_tokens.append(synonym)
-        
-        return ' '.join(expanded_tokens)
-    
-    def reformulate_query(self, query: str) -> List[str]:
-        """Generate multiple query perspectives using LLM"""
-        try:
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "Generate 3 alternative phrasings of the query. Return only the alternatives, one per line."},
-                    {"role": "user", "content": query}
-                ],
-                max_tokens=150,
-                temperature=0.7
-            )
-            alternatives = response.choices[0].message.content.strip().split('\n')
-            return [query] + [alt.strip() for alt in alternatives if alt.strip()][:2]
-        except:
-            return [query]
-    
-    def extract_query_intent(self, query: str) -> Dict:
-        """Extract intent and key components from query"""
-        doc = nlp(query)
-        
-        return {
-            "entities": [ent.text for ent in doc.ents],
-            "keywords": processor.extract_keywords(query),
-            "expanded": self.expand_query_with_synonyms(query),
-            "alternatives": self.reformulate_query(query)
-        }
-
-
 # === MAIN PROCESSING PIPELINE ===
 def process_file(file_path: str) -> List[Dict]:
     """Process a single file and return chunks"""
