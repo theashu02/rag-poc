@@ -150,7 +150,7 @@ export function ChatInterface() {
       <ChatInput
         onSend={handleSendMessage}
         disabled={isLoading}
-        placeholder="Your documents. Your data. Instant insights..."
+        placeholder="Instant insights..."
       />
     </div>
   );

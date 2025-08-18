@@ -10,7 +10,7 @@ import cluster from "cluster";
 import os from "os";
 import { LRUCache as LRU } from "lru-cache";
 
-/* cluster bootstrap – use all CPU cores */
+/* cluster – use all CPU cores */
 const cpuCount = os.cpus().length;
 if (cluster.isPrimary) {
   console.log(`Primary ${process.pid} - forking ${cpuCount} workers`);
@@ -344,9 +344,17 @@ class UltraFastRAGEngine {
         temperature: 0.2,
         max_tokens: 400,
         messages: [
-          { role: "system", content: "Answer concisely using ONLY the provided context. Use [Doc X] for citations." },
-          { role: "user", content: `Context:\n${context}\n\nQ: ${question}\nA:` },
-        ],
+            {
+              role: "system",
+              content: `You are a helpful assistant that answers questions based on the provided context.
+                Follow these guidelines:
+                1. Answer based ONLY on the information in the context
+                2. If the context doesn't contain enough information, say so
+                3. Be concise but comprehensive
+                4. Cite document numbers when referencing specific information`,
+            },
+            { role: "user", content: `Context:\n${context}\n\nQ: ${question}\nA:` },
+          ],
       }),
       new Promise((_, rej) => setTimeout(() => rej(new Error("OpenAI timeout")), 8000)),
     ]) as any;

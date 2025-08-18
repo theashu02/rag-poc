@@ -16,7 +16,7 @@ interface ChatInputProps {
 export function ChatInput({
   onSend,
   disabled = false,
-  placeholder = "Your documents. Your data. Instant insights...",
+  placeholder = "Instant insights...",
 }: ChatInputProps) {
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -50,7 +50,7 @@ export function ChatInput({
       <div className="max-w-3xl mx-auto">
         <div className="relative flex items-end gap-4">
           <div className="flex-1 relative">
-            <div className="relative rounded-full bg-background border  dark:border-gray-800/90 shadow-sm dark:shadow-lg dark:hover:shadow-xl transition-all duration-200 hover:border-primary/30">
+            <div className="relative rounded-2xl bg-background border dark:border-gray-800/90 shadow-sm dark:shadow-lg dark:hover:shadow-xl transition-all duration-200 hover:border-primary/30">
               <Textarea
                 ref={textareaRef}
                 value={input}
@@ -59,7 +59,7 @@ export function ChatInput({
                 placeholder={placeholder}
                 disabled={disabled}
                 className={cn(
-                  "min-h-[60px] max-h-[200px] resize-none border-0 bg-transparent rounded-full",
+                  "min-h-[60px] max-h-[200px] resize-none border-0 bg-transparent rounded-2xl",
                   "focus:ring-0 focus:outline-none",
                   "px-6 py-5 pr-32 text-[15px] leading-relaxed placeholder:text-muted-foreground",
                   "font-normal"
