@@ -6,7 +6,6 @@ import { MessageBubble } from "./MessageBubble";
 import { ChatInput } from "./ChatInput";
 import { Button } from "@/components/ui/button";
 import { Trash2, MessageSquare, Sparkles, Zap, Brain, Lightbulb } from "lucide-react";
-import { ModeToggle } from "@/components/ThemeToggle";
 
 export function ChatInterface() {
   const { messages, isLoading, error, typingMessageId, sendMessage, clearMessages } = useChatStore();
@@ -70,7 +69,6 @@ export function ChatInterface() {
             <Trash2 className="size-4" />
           </Button>
         )}
-        <ModeToggle />
       </div>
 
       {/* Messages */}

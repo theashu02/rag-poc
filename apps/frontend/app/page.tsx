@@ -1,17 +1,11 @@
-import { ChatInterface } from "./components/chatUI/ChatInterface";
-import HealthCheck from "./components/common/HealthCheck";
-import NetworkHealthBar from "./components/common/NetworkStatus";
-import { Sidebar } from "./components/common/Sidebar";
+import NetworkHealthBar from "./components/common/NetworkStatus"
+import { LoginPage } from "./components/Auth/Login";
 
 export default function Home() {
   return (
-    <div className="flex h-screen">
-      {/* <Sidebar /> */}
+    <div className="flex h-screen w-screen">
       <NetworkHealthBar />
-      <HealthCheck />
-      <div className="flex flex-col items-center w-full">
-        <ChatInterface />
-      </div>
+      <LoginPage />
     </div>
-  );
+  )
 }

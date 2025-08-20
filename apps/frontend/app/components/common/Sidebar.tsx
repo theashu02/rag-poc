@@ -1,284 +1,169 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import {
-  PlusIcon,
-  MessageSquareIcon,
-  MenuIcon,
-  SettingsIcon,
-  MoreHorizontalIcon,
-  SparklesIcon,
-  ClockIcon,
-  StarIcon,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useEffect, useState } from "react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { ChevronLeft, ChevronRight, LogOut, Menu } from 'lucide-react'
+import { cn } from "@/lib/utils"
+import { signOut, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation"
+import { ModeToggle } from "@/components/ThemeToggle"
 
-interface ChatItem {
-  id: string;
-  title: string;
-  timestamp: string;
-  isPinned?: boolean;
-  isNew?: boolean;
+interface SidebarProps {
+  user?: {
+    name: string
+    email: string
+    avatar?: string
+  }
+  onSignOut?: () => void
+  className?: string
 }
 
-const mockChats: ChatItem[] = [
-  {
-    id: "1",
-    title: "React Components Best Practices",
-    timestamp: "2 hours ago",
-    isPinned: true,
-  },
-  {
-    id: "2",
-    title: "TypeScript Advanced Types",
-    timestamp: "Yesterday",
-    isNew: true,
-  },
-  { id: "3", title: "Next.js App Router Guide", timestamp: "2 days ago" },
-  { id: "4", title: "Tailwind CSS Tips & Tricks", timestamp: "3 days ago" },
-  { id: "5", title: "Database Design Patterns", timestamp: "1 week ago" },
-  { id: "6", title: "API Authentication Methods", timestamp: "1 week ago" },
-  { id: "7", title: "Performance Optimization", timestamp: "2 weeks ago" },
-];
+export function Sidebar({ 
+  user = { name: "John Doe", email: "john@example.com" }, className
+}: SidebarProps) {
+  const router = useRouter();
+  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const { data: session } = useSession();
 
-function CollapsedSidebarContent({ onClose }: { onClose?: () => void }) {
-  const [selectedChat, setSelectedChat] = useState<string | null>("1");
+  const toggleCollapse = () => setIsCollapsed(!isCollapsed)
+  const toggleMobile = () => setIsMobileOpen(!isMobileOpen)
 
-  const handleChatSelect = (chatId: string) => {
-    setSelectedChat(chatId);
-    onClose?.();
-  };
-
-  return (
-    <div className="flex h-screen w-full flex-col border-r border-sidebar-border bg-amber-200">
-      <div className="flex items-center justify-center p-4 border-b border-sidebar-border">
-        <div className="relative">
-          <div className="w-10 h-8 bg-gradient-to-br from-sidebar-primary to-accent rounded-xl flex items-center justify-center shadow-sm">
-            <SparklesIcon className="w-5 h-5 text-sidebar-primary-foreground" />
-          </div>
-          <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full border-2 border-sidebar"></div>
-        </div>
-      </div>
-
-      <div className="p-3">
-        <Button
-          size="icon"
-          className="w-full h-11 bg-sidebar-primary hover:bg-sidebar-primary/90 text-sidebar-primary-foreground rounded-xl shadow-sm transition-all duration-200 hover:shadow-md"
-          onClick={() => handleChatSelect("")}
-        >
-          <PlusIcon className="w-5 h-5" />
-        </Button>
-      </div>
-
-      <ScrollArea className="flex-1 px-2">
-        <div className="space-y-2">
-          {mockChats.slice(0, 6).map((chat) => (
-            <div
-              key={chat.id}
-              className={cn(
-                "relative flex items-center justify-center rounded-xl p-3 cursor-pointer transition-all duration-200 group",
-                selectedChat === chat.id
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:shadow-sm"
-              )}
-              onClick={() => handleChatSelect(chat.id)}
-            >
-              <MessageSquareIcon className="w-5 h-5" />
-              {chat.isPinned && (
-                <div className="absolute -top-1 -right-1 w-2 h-2 bg-accent rounded-full"></div>
-              )}
-              {chat.isNew && (
-                <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-              )}
-            </div>
-          ))}
-        </div>
-      </ScrollArea>
-
-      <div className="border-t border-sidebar-border p-4 flex justify-center">
-        <div className="relative">
-          <Avatar className="h-10 w-10 ring-2 ring-sidebar-accent">
-            <AvatarImage src="/placeholder.svg?height=40&width=40" />
-            <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground font-semibold">
-              JD
-            </AvatarFallback>
-          </Avatar>
-          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-sidebar"></div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SidebarContent({ onClose }: { onClose?: () => void }) {
-  const [selectedChat, setSelectedChat] = useState<string | null>("1");
-
-  const handleChatSelect = (chatId: string) => {
-    setSelectedChat(chatId);
-    onClose?.();
-  };
-
-  return (
-    <div className="flex h-full w-full flex-col bg-sidebar border-r border-sidebar-border">
-      <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <div className="w-10 h-10 bg-gradient-to-br from-sidebar-primary to-accent rounded-xl flex items-center justify-center shadow-sm">
-              <SparklesIcon className="w-5 h-5 text-sidebar-primary-foreground" />
-            </div>
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full border-2 border-sidebar"></div>
-          </div>
-          <div>
-            <h1 className="font-bold text-lg text-sidebar-foreground">
-              AI Chat
-            </h1>
-            <p className="text-xs text-sidebar-foreground/60">Powered by AI</p>
-          </div>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 text-sidebar-foreground hover:bg-sidebar-accent rounded-lg"
-        >
-          <PlusIcon className="w-4 h-4" />
-        </Button>
-      </div>
-
-      <div className="p-4">
-        <Button
-          className="w-full justify-start gap-3 h-11 bg-sidebar-primary hover:bg-sidebar-primary/90 text-sidebar-primary-foreground rounded-xl shadow-sm transition-all duration-200 hover:shadow-md font-medium"
-          onClick={() => handleChatSelect("")}
-        >
-          <PlusIcon className="w-5 h-5" />
-          New Chat
-        </Button>
-      </div>
-
-      <ScrollArea className="flex-1 px-3">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-sidebar-foreground/70 uppercase tracking-wider">
-            <ClockIcon className="w-3 h-3" />
-            Recent Chats
-          </div>
-          {mockChats.map((chat) => (
-            <div
-              key={chat.id}
-              className={cn(
-                "group relative flex items-center gap-3 rounded-xl px-3 py-3 text-sm cursor-pointer transition-all duration-200",
-                selectedChat === chat.id
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:shadow-sm"
-              )}
-              onClick={() => handleChatSelect(chat.id)}
-            >
-              <div className="relative">
-                <MessageSquareIcon className="w-4 h-4 shrink-0" />
-                {chat.isPinned && (
-                  <StarIcon className="w-2 h-2 absolute -top-1 -right-1 text-accent fill-current" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <div className="truncate font-medium">{chat.title}</div>
-                  {chat.isNew && (
-                    <Badge
-                      variant="secondary"
-                      className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 border-0"
-                    >
-                      New
-                    </Badge>
-                  )}
-                </div>
-                <div className="text-xs text-sidebar-foreground/60 mt-0.5">
-                  {chat.timestamp}
-                </div>
-              </div>
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent rounded-lg"
-                >
-                  <MoreHorizontalIcon className="w-3 h-3" />
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </ScrollArea>
-
-      <div className="border-t border-sidebar-border p-4">
-        <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-sidebar-accent/50 transition-colors cursor-pointer">
-          <div className="relative">
-            <Avatar className="h-10 w-10 ring-2 ring-sidebar-accent">
-              <AvatarImage src="/placeholder.svg?height=40&width=40" />
-              <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground font-semibold">
-                JD
-              </AvatarFallback>
-            </Avatar>
-            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-sidebar"></div>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-sidebar-foreground truncate">
-              John Doe
-            </div>
-            <div className="text-xs text-sidebar-foreground/60 truncate">
-              john@example.com
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent rounded-lg"
-          >
-            <SettingsIcon className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function Sidebar() {
-  const isMobile = useIsMobile();
-  const [open, setOpen] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-
-  if (isMobile) {
-    return (
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="fixed top-4 left-4 z-40 md:hidden rounded-xl shadow-sm"
-          >
-            <MenuIcon className="w-5 h-5" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-80 p-0">
-          <SidebarContent onClose={() => setOpen(false)} />
-        </SheetContent>
-      </Sheet>
-    );
+  const handleSignOut = () => {
+    signOut()
   }
 
+  useEffect(()=>{
+     if(!session){
+      router.push("/")
+     }
+  }, [session, router])
+
+
   return (
-    <div
-      className={cn(
-        "hidden md:flex h-screen transition-all duration-300 ease-in-out",
-        isHovered ? "w-80" : "w-16"
+    <>
+      {/* Mobile Menu Button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="fixed top-4 left-4 z-50 md:hidden bg-sidebar text-sidebar-foreground hover:bg-sidebar-accent"
+        onClick={toggleMobile}
+      >
+        <Menu className="h-5 w-5" />
+      </Button>
+
+      {/* Mobile Overlay */}
+      {isMobileOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={toggleMobile}
+        />
       )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {isHovered ? <SidebarContent /> : <CollapsedSidebarContent />}
-    </div>
-  );
+
+      {/* Sidebar */}
+      <div
+        className={cn(
+          "fixed left-0 top-0 z-40 h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out",
+          "md:relative md:z-auto",
+          isCollapsed ? "w-16" : "w-64",
+          isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+          className
+        )}
+      >
+        {/* Header with Toggle Button */}
+        <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
+          {!isCollapsed && (
+            <h2 className="text-lg font-semibold text-sidebar-foreground">
+              Menu
+            </h2>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleCollapse}
+            className="hidden md:flex text-sidebar-foreground hover:bg-sidebar-accent ml-auto"
+          >
+            {isCollapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+
+        {/* Content Area */}
+        <div className="flex flex-col">
+          {/* User Profile Section */}
+          <div className="flex p-4 border-b border-sidebar-border items-center justify-center">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10 flex-shrink-0">
+                <AvatarImage src={session?.user.image || "/placeholder.svg"} alt={session?.user.name || "User Name"} />
+                <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground">
+                  {session?.user.name?.split(' ').map(n => n[0]).join('').toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              {!isCollapsed && (
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-sidebar-foreground truncate">
+                    {session?.user.name}
+                  </p>
+                  <p className="text-xs text-sidebar-foreground/70 truncate">
+                    {session?.user.email}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Navigation Area */}
+          <div className="flex-1 p-4">
+            {!isCollapsed && (
+              <div className="space-y-2">
+                <div className="text-xs font-medium text-sidebar-foreground/70 uppercase tracking-wider">
+                  Navigation
+                </div>
+                <div className="space-y-1">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent"
+                  >
+                    Dashboard
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent"
+                  >
+                    Settings
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent"
+                  >
+                    Profile
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+      
+          {/* Sign Out Button */}
+          <div className="absolute bottom-0 p-4 border-t border-sidebar-border w-full flex flex-col justify-center items-center gap-3">
+            <ModeToggle isCollapsed={isCollapsed}/>
+            <Button
+              variant="ghost"
+              onClick={handleSignOut}
+              className={cn(
+                "text-destructive hover:bg-[#F4F4F4] hover:text-destructive-foreground transition-colors",
+                isCollapsed ? "w-full p-2" : "w-full justify-start"
+              )}
+            >
+              <LogOut className="h-4 w-4" />
+              {!isCollapsed && <span className="ml-2">Sign Out</span>}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </>
+  )
 }
