@@ -9,7 +9,7 @@ export default function Home() {
       {/* <Sidebar /> */}
       <NetworkHealthBar />
       <HealthCheck />
-      <div className="flex flex-col items-center w-full bg-red-300">
+      <div className="flex flex-col items-center w-full">
         <ChatInterface />
       </div>
     </div>

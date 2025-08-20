@@ -165,7 +165,7 @@ class FastQueryProcessor {
       const completion = await Promise.race([
         openai.chat.completions.create({
           model: "gpt-4o-mini",
-          temperature: 0.3,
+          temperature: 0.4,
           max_tokens: 50,
           messages: [
             { role: "system", content: "Rephrase the query once. Be concise." },

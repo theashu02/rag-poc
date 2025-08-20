@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useChatStore } from "@/store/chat-store"
 
 interface TypingAnimationProps {
@@ -10,41 +10,41 @@ interface TypingAnimationProps {
   onComplete?: () => void
 }
 
-export function TypingAnimation({ messageId, content, speed = 60, onComplete }: TypingAnimationProps) {
+export function TypingAnimation({ messageId, content, speed = 10, onComplete }: TypingAnimationProps) {
   const [displayedContent, setDisplayedContent] = useState("")
   const [currentIndex, setCurrentIndex] = useState(0)
   const { updateMessageContent, setMessageComplete, setTypingMessageId } = useChatStore()
+  const startTimeRef = useRef(0)
+  const currentIndexRef = useRef(0)
 
   useEffect(() => {
-    if (currentIndex < content.length) {
-      const timer = setTimeout(() => {
-        const nextChar = content[currentIndex]
-        const newContent = displayedContent + nextChar
+    currentIndexRef.current = 0
+    startTimeRef.current = performance.now()
+    const tick = () => {
+      const now = performance.now()
+      const elapsed = now - startTimeRef.current
+      const nextIndex = Math.min(Math.floor(elapsed / speed), content.length)
 
+      if (nextIndex > currentIndexRef.current) {
+        const newContent = content.slice(0, nextIndex)
         setDisplayedContent(newContent)
-        setCurrentIndex(currentIndex + 1)
-
+        setCurrentIndex(nextIndex)
+        currentIndexRef.current = nextIndex
         updateMessageContent(messageId, newContent)
-      }, speed)
+      }
 
-      return () => clearTimeout(timer)
-    } else if (content.length > 0) {
-      // Animation complete
-      setMessageComplete(messageId)
-      setTypingMessageId(null)
-      onComplete?.()
+      if (nextIndex < content.length) {
+        requestAnimationFrame(tick)
+      } else {
+        setMessageComplete(messageId)
+        setTypingMessageId(null)
+        onComplete?.()
+      }
     }
-  }, [
-    currentIndex,
-    content,
-    displayedContent,
-    messageId,
-    speed,
-    updateMessageContent,
-    setMessageComplete,
-    setTypingMessageId,
-    onComplete,
-  ])
+
+    const rAF = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(rAF)
+  }, [content, speed, messageId, updateMessageContent, setMessageComplete, setTypingMessageId, onComplete])
 
   return (
     <div className="relative">

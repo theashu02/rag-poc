@@ -59,7 +59,7 @@ class RAGConfig:
     initial_retrieval_k: int = 100
     rerank_k: int = 30
     final_k: int = 10
-    hybrid_alpha: float = 0.7  # Weight for dense vs sparse
+    hybrid_alpha: float = 0.7 
 
 config = RAGConfig()
 
