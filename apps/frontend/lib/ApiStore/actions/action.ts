@@ -38,7 +38,7 @@ try {
   throw new Error('Failed to initialize Google Cloud Storage');
 }
 
-const userId = 'user-123';
+// const userId = localStorage.getItem('userId');
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024; // 5GB
 const ALLOWED_FILE_TYPES = [
@@ -49,8 +49,11 @@ const ALLOWED_FILE_TYPES = [
   'application/pdf',
 ];
 
+const userId = "userxyz"
+
 const getNextFileName = async (originalFileName: string) => {
   try {
+
     const prefix = `Data/${userId}/`;
     const [files] = await bucket.getFiles({ 
       prefix,

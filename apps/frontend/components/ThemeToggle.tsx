@@ -25,7 +25,7 @@ export function ModeToggle({ isCollapsed }: isCollapsed) {
 
   if (!mounted) return null
 
-  console.log(isCollapsed, "this comming from the sidebar")
+  // console.log(isCollapsed, "this comming from the sidebar")
 
   const renderThemeIcon = () => {
     switch (theme) {

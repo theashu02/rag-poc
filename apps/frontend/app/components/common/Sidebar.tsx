@@ -9,19 +9,7 @@ import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation"
 import { ModeToggle } from "@/components/ThemeToggle"
 
-interface SidebarProps {
-  user?: {
-    name: string
-    email: string
-    avatar?: string
-  }
-  onSignOut?: () => void
-  className?: string
-}
-
-export function Sidebar({ 
-  user = { name: "John Doe", email: "john@example.com" }, className
-}: SidebarProps) {
+export function Sidebar() {
   const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
@@ -31,13 +19,13 @@ export function Sidebar({
   const toggleMobile = () => setIsMobileOpen(!isMobileOpen)
 
   const handleSignOut = () => {
-    signOut()
+    signOut();
   }
 
   useEffect(()=>{
-     if(!session){
+    if(!session){
       router.push("/")
-     }
+    }
   }, [session, router])
 
 
@@ -67,8 +55,7 @@ export function Sidebar({
           "fixed left-0 top-0 z-40 h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out",
           "md:relative md:z-auto",
           isCollapsed ? "w-16" : "w-64",
-          isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
-          className
+          isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         )}
       >
         {/* Header with Toggle Button */}
