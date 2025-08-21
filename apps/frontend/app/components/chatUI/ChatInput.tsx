@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { SendHorizontal , Square, ArrowUp, Paperclip, Mic, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FileUploader } from "../common/FileUpload";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -66,6 +67,9 @@ export function ChatInput({
                 )}
                 rows={1}
               />
+
+              {/* <ResumableUploader /> */}
+              <FileUploader />
 
               {/* Action buttons */}
               {/* for enabling this make the max-w-3xl in div to 4xl */}
