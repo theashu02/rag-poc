@@ -9,6 +9,7 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { toast } from "sonner";
+import { useUserStore } from '@/store/useUserStore';
 
 type Status = 'idle' | 'dragging' | 'uploading' | 'success' | 'error';
 type UploadedFileDetails = { originalFileName: string; newFileName: string };
@@ -29,6 +30,7 @@ export function FileUploader() {
   const [uploadedFile, setUploadedFile] = useState<UploadedFileDetails | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const xhrRef = useRef<XMLHttpRequest | null>(null);
+  const userId = useUserStore((e) => e.userId);
 
   const handleFileSelect = (selectedFile: File | null) => {
     if (status === 'uploading') return;
@@ -45,6 +47,10 @@ export function FileUploader() {
   };
   
   const handleUpload = async (fileToUpload: File) => {
+    if(!userId) {
+      toast('Please sign in first.');
+      return;
+    }
     setStatus('uploading');
     setProgress(0);
     setError(null);
@@ -55,15 +61,9 @@ export function FileUploader() {
         name: fileToUpload.name,
         type: fileToUpload.type,
         size: fileToUpload.size,
+        userId,
       });
 
-        // if (signedUrlResult.failure) {
-        //   throw new Error(signedUrlResult.failure);
-        // }
-        // const { url, originalFileName, newFileName } = signedUrlResult.success;
-        // await uploadFile(fileToUpload, url);   
-        // setStatus('success');
-        // setUploadedFile({ originalFileName, newFileName });
       if('failure' in signedUrlResult){
         throw new Error(signedUrlResult.failure);
       } else {

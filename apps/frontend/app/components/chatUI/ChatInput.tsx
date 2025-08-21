@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { SendHorizontal , Square, ArrowUp, Paperclip, Mic, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FileUploader } from "../common/FileUpload";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -21,6 +22,7 @@ export function ChatInput({
 }: ChatInputProps) {
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   const handleSend = () => {
     const trimmedInput = input.trim();
@@ -69,20 +71,29 @@ export function ChatInput({
               />
 
               {/* <ResumableUploader /> */}
-              <FileUploader />
+              {/* <FileUploader /> */}
 
               {/* Action buttons */}
               {/* for enabling this make the max-w-3xl in div to 4xl */}
-              {/* <div className="absolute right-3 bottom-3 flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled
-                  className="h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200 hover:scale-105"
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-                <Button
+              <div className="absolute right-3 bottom-3 flex items-center gap-1">
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200 hover:scale-105"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Upload Files</DialogTitle>
+                    </DialogHeader>
+                    <FileUploader />
+                  </DialogContent>
+                </Dialog>
+                {/* <Button
                   variant="ghost"
                   size="sm"
                   disabled
@@ -97,8 +108,8 @@ export function ChatInput({
                   className="h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200 hover:scale-105"
                 >
                   <Mic className="w-4 h-4" />
-                </Button>
-              </div> */}
+                </Button> */}
+              </div>
             </div>
           </div>
 

@@ -38,8 +38,6 @@ try {
   throw new Error('Failed to initialize Google Cloud Storage');
 }
 
-// const userId = localStorage.getItem('userId');
-
 const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024; // 5GB
 const ALLOWED_FILE_TYPES = [
   'application/json',
@@ -49,9 +47,7 @@ const ALLOWED_FILE_TYPES = [
   'application/pdf',
 ];
 
-const userId = "userxyz"
-
-const getNextFileName = async (originalFileName: string) => {
+const getNextFileName = async (originalFileName: string, userId: string) => {
   try {
 
     const prefix = `Data/${userId}/`;
@@ -85,11 +81,12 @@ const actionSchema = z.object({
   size: z.number().positive(),
 });
 
-export async function getSignedUrl(rawInput: { name: string; type: string; size: number }) {
+export async function getSignedUrl(rawInput: { name: string; type: string; size: number; userId: string; }) {
+  const { userId, ...file} = rawInput;
   try {
-    console.log('Input received:', rawInput);
+    console.log('Input received:', rawInput, userId);
 
-    const input = actionSchema.parse(rawInput);
+    const input = actionSchema.parse(file);
 
     if (input.size > MAX_FILE_SIZE) {
       return { failure: 'File is too large. Maximum size is 5GB.' };
@@ -99,7 +96,7 @@ export async function getSignedUrl(rawInput: { name: string; type: string; size:
       return { failure: `File type "${input.type}" is not allowed.` };
     }
     
-    const newFileName = await getNextFileName(input.name);
+    const newFileName = await getNextFileName(input.name, userId);
     const filePath = `Data/${userId}/${newFileName}`;
 
     console.log('Generating signed URL for:', filePath);

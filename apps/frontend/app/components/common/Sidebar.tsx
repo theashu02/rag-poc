@@ -8,18 +8,22 @@ import { cn } from "@/lib/utils"
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation"
 import { ModeToggle } from "@/components/ThemeToggle"
+import { useUserStore } from "@/store/useUserStore"
 
 export function Sidebar() {
   const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const { data: session } = useSession();
+  const clearUser = useUserStore((s) => s.clearUser);
 
   const toggleCollapse = () => setIsCollapsed(!isCollapsed)
   const toggleMobile = () => setIsMobileOpen(!isMobileOpen)
 
   const handleSignOut = () => {
-    signOut();
+    clearUser();
+    localStorage.removeItem('user-storage')
+    signOut({ callbackUrl: "/" });
   }
 
   useEffect(()=>{
