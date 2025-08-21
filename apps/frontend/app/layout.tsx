@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
-import SessionWrapping from "@/lib/sessionWrapping";
-import { Toaster } from "@/components/ui/sonner";
+import { Providers } from "@/components/providers";
 
 export const metadata: Metadata = {
   title: "RAG-POC",
@@ -15,20 +13,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <SessionWrapping>
-      <html lang="en" suppressHydrationWarning>
-        <body>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            {children}
-            <Toaster />
-          </ThemeProvider>
-        </body>
-      </html>
-    </SessionWrapping>
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
   );
 }

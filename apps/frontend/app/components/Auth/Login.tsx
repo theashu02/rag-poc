@@ -1,95 +1,3 @@
-// "use client"
-
-// import { signIn, useSession } from "next-auth/react"
-// import { Button } from "@/components/ui/button"
-// import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-// import { Chrome, Lock } from "lucide-react"
-// import { useState, useEffect } from "react"
-// import { useRouter } from "next/navigation"
-
-// export default function LoginPage() {
-//   const { data: session, status } = useSession()
-//   const router = useRouter()
-//   const [isLoading, setIsLoading] = useState(false)
-
-//   // Redirect if already authenticated
-//   useEffect(() => {
-//     if (session) {
-//       router.push("/app")
-//     }
-//   }, [session, router])
-
-//   if (status === "loading") {
-//     return (
-//       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-//         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-//       </div>
-//     )
-//   }
-
-//   if (session) {
-//     return null 
-//   }
-
-//   const handleGoogleSignIn = async () => {
-//     setIsLoading(true)
-//     try {
-//       await signIn("google", { callbackUrl: "/app" })
-//     } catch (error) {
-//       console.error("Sign in error:", error)
-//     } finally {
-//       setIsLoading(false)
-//     }
-//   }
-
-//   return (
-//     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4">
-//       <div className="w-full max-w-md space-y-6">
-//         {/* Logo/Brand Section */}
-//         <div className="text-center space-y-2">
-//           <div className="mx-auto w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
-//             <Lock className="w-6 h-6 text-primary-foreground" />
-//           </div>
-//           <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
-//           <p className="text-muted-foreground">Sign in to your account to continue</p>
-//         </div>
-
-//         <Card className="border-0 shadow-xl bg-card/50 backdrop-blur-sm">
-//           <CardHeader className="space-y-1 pb-6">
-//             <CardTitle className="text-xl font-semibold text-center">Sign in</CardTitle>
-//             <CardDescription className="text-center">Sign in with your Google account</CardDescription>
-//           </CardHeader>
-//           <CardContent className="space-y-6">
-//             <Button
-//               onClick={handleGoogleSignIn}
-//               disabled={isLoading}
-//               className="w-full h-12 text-sm font-medium bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 shadow-sm dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-white dark:border-gray-600"
-//               variant="outline"
-//             >
-//               {isLoading ? (
-//                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900 dark:border-white mr-2"></div>
-//               ) : (
-//                 <Chrome className="mr-2 h-4 w-4" />
-//               )}
-//               Continue with Google
-//             </Button>
-//           </CardContent>
-//         </Card>
-
-//         {/* Footer */}
-//         <div className="text-center text-xs text-muted-foreground">
-//           <p>
-//             By signing in, you agree to our{" "}
-//             <button className="underline hover:text-foreground transition-colors">Terms of Service</button> and{" "}
-//             <button className="underline hover:text-foreground transition-colors">Privacy Policy</button>
-//           </p>
-//         </div>
-//       </div>
-//     </div>
-//   )
-// }
-
-
 "use client"
 
 import { Button } from "@/components/ui/button"
@@ -106,7 +14,7 @@ export function LoginPage() {
 
   useEffect(() => {
     if(session) {
-        router.push("/app");
+        router.push("/application");
     }
   }, [session, router])
 
@@ -120,7 +28,7 @@ export function LoginPage() {
 
   const handleGoogleLogin = async () => {
     try {
-        await signIn("google", { callbackUrl: "/app" })
+        await signIn("google", { callbackUrl: "/application" })
     } catch (error) {
         console.error("Sign in error: ", error);
     } finally{
