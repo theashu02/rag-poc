@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, LogOut, Menu } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation"
-import { ModeToggle } from "@/components/ThemeToggle"
+import { ModeToggle } from "@/components/ThemeFiles/ThemeToggle"
 import { useUserStore } from "@/store/useUserStore"
 
 export function Sidebar() {

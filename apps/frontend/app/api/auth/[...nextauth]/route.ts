@@ -1,4 +1,4 @@
-import { authOption } from "@/lib/authOptions";
+import { authOption } from "@/lib/Auth/authOptions";
 import NextAuth from "next-auth";
 
 

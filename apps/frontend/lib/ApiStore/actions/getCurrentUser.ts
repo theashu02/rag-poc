@@ -2,8 +2,8 @@
 
 import { getServerSession } from 'next-auth';
 import User from '@/Models/User';
-import connectDB from '@/lib/mongodb';
-import { authOption } from '@/lib/authOptions';
+import connectDB from '@/lib/MongoDB/mongodb';
+import { authOption } from '@/lib/Auth/authOptions';
 
 export async function getUser() {
   const session = await getServerSession(authOption);

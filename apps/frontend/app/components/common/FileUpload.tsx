@@ -2,7 +2,7 @@
 
 import { useState, type DragEvent, useRef } from 'react';
 import { UploadCloud, CheckCircle2, XCircle, LoaderCircle } from 'lucide-react';
-import { getSignedUrl } from '@/lib/ApiStore/actions/action';
+import { getSignedUrl } from '@/lib/ApiStore/actions/uploadaction';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';

@@ -12,7 +12,7 @@ declare module "next-auth" {
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
-import clientPromise from "./mongodb-adapter";
+import clientPromise from "../MongoDB/mongodb-adapter";
 
 export const authOption: NextAuthOptions = {
   adapter: MongoDBAdapter(clientPromise),

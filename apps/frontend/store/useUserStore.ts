@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 interface UserState {
   userId: string | null;
@@ -18,22 +18,24 @@ export const useUserStore = create<UserState>()(
       email: null,
       name: null,
       isAuthenticated: false,
-      setUser: (user) => set({ 
-        userId: user.userId, 
-        email: user.email, 
-        name: user.name,
-        isAuthenticated: true
-      }),
-      clearUser: () => set({ 
-        userId: null, 
-        email: null, 
-        name: null,
-        isAuthenticated: false
-      }),
+      setUser: (user) =>
+        set({
+          userId: user.userId,
+          email: user.email,
+          name: user.name,
+          isAuthenticated: true,
+        }),
+      clearUser: () =>
+        set({
+          userId: null,
+          email: null,
+          name: null,
+          isAuthenticated: false,
+        }),
       updateAuthStatus: (isAuthenticated) => set({ isAuthenticated }),
     }),
     {
-      name: 'user-storage',
+      name: "user-storage",
       partialize: (state) => ({
         userId: state.userId,
         email: state.email,

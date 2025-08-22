@@ -1,3 +1,5 @@
+'use client'
+
 import NetworkHealthBar from "./components/common/NetworkStatus"
 import { LoginPage } from "./components/Auth/Login";
 
