@@ -1,16 +1,36 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useChatStore } from "@/store/chat-store";
+import { useSelector, useDispatch } from "react-redux";
+import type { RootState, AppDispatch } from "@/store/store";
+import {
+  sendMessage as sendMessageThunk,
+  clearMessages as clearMessagesAction,
+} from "@/store/slices/ChatStoreSlice";
 import { MessageBubble } from "./MessageBubble";
 import { ChatInput } from "./ChatInput";
 import { Button } from "@/components/ui/button";
-import { Trash2, MessageSquare, Sparkles, Zap, Brain, Lightbulb } from "lucide-react";
+import {
+  Trash2,
+  MessageSquare,
+  Sparkles,
+  Zap,
+  Brain,
+  Lightbulb,
+} from "lucide-react";
 
 export function ChatInterface() {
-  const { messages, isLoading, error, typingMessageId, sendMessage, clearMessages } = useChatStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [pendingResponse, setPendingResponse] = useState<string>("");
+
+  const dispatch = useDispatch<AppDispatch>();
+  const { messages, isLoading, error, typingMessageId } = useSelector(
+    (state: RootState) => state.chat
+  );
+
+  const sendMessage = (content: string) =>
+    dispatch(sendMessageThunk(content)).unwrap();
+  const clearMessages = () => dispatch(clearMessagesAction());
 
   // Auto-scroll to bottom with smooth behavior
   useEffect(() => {
@@ -20,10 +40,10 @@ export function ChatInterface() {
   const handleSendMessage = async (content: string) => {
     setPendingResponse("");
     try {
-      const result = await sendMessage(content);
+      const result = await sendMessage(content);  // thunk returns { messageId, content }
       setPendingResponse(result.content);
-    } catch (error) {
-      // error is already handled in the store and UI, keep UI stable
+    } catch {
+      /* error already stored in slice */
     }
   };
 
@@ -86,7 +106,8 @@ export function ChatInterface() {
                 Welcome to Your Knowledge-Powered AI Assistant
               </h2>
               <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-                Harness the power of Retrieval-Augmented Generation to get precise, trustworthy answers from your own data—instantly and effortlessly.
+                Harness the power of Retrieval-Augmented Generation to get precise,
+                trustworthy answers from your own data—instantly and effortlessly.
               </p>
 
               {/* Suggested Prompts */}

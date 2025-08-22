@@ -1,15 +1,19 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useDispatch } from 'react-redux';                
 import { getUser } from '@/lib/ApiStore/actions/getCurrentUser';
-import { useUserStore } from '@/store/useUserStore';
+import { setUser } from '@/store/slices/UserStoreSlice';       
+import type { AppDispatch } from '@/store/store';       
 
 export default function InitUser() {
-  const setUser = useUserStore((s) => s.setUser);
+  const dispatch = useDispatch<AppDispatch>();
+
   useEffect(() => {
     getUser().then(user => {
-      if (user) setUser(user);
+      if (user) dispatch(setUser(user));                 
     });
-  }, [setUser]);
+  }, [dispatch]);
+
   return null;
 }

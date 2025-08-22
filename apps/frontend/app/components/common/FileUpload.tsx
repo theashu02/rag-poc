@@ -9,7 +9,9 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { toast } from "sonner";
-import { useUserStore } from '@/store/useUserStore';
+import { useSelector } from 'react-redux';
+import type { RootState } from '@/store/store';
+
 
 type Status = 'idle' | 'dragging' | 'uploading' | 'success' | 'error';
 type UploadedFileDetails = { originalFileName: string; newFileName: string };
@@ -30,7 +32,7 @@ export function FileUploader() {
   const [uploadedFile, setUploadedFile] = useState<UploadedFileDetails | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const xhrRef = useRef<XMLHttpRequest | null>(null);
-  const userId = useUserStore((e) => e.userId);
+  const userId = useSelector((state: RootState) => state.user.userId);
 
   const handleFileSelect = (selectedFile: File | null) => {
     if (status === 'uploading') return;

@@ -1,6 +1,6 @@
 "use client"
 
-import type { Message } from "@/store/chat-store"
+import type { Message } from "@/store/slices/ChatStoreSlice"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { TypingAnimation } from "./TypingAnimation"
 import { User, Copy, Check, Sparkles } from "lucide-react"
