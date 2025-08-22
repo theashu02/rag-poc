@@ -1,6 +1,6 @@
 'use server';
 
-import { Storage } from '@google-cloud/storage';
+import { Storage, type File } from '@google-cloud/storage';
 import { z } from 'zod';
 import path from 'path';
 
@@ -149,5 +149,56 @@ export async function getSignedUrl(rawInput: { name: string; type: string; size:
     }
     
     return { failure: 'Could not get signed URL. Please check server configuration and try again.' };
+  }
+}
+
+// get the list based on the user id from the GCS
+export async function getUserFiles(userId: string) {
+  if (!userId) {
+    return { failure: 'User not authenticated.' };
+  }
+
+  try {
+    const prefix = `Data/${userId}/`;
+    const [files] = await bucket.getFiles({ prefix });
+
+    if (files.length === 1 && files[0].name === prefix) {
+      return { success: [] };
+    }
+    const fileDetails = files
+      .filter((file: File) => file.name !== prefix)
+      .map((file: File) => ({
+        name: file.name.replace(prefix, ''), 
+        size: file.metadata.size,
+        createdAt: file.metadata.timeCreated,
+      }));
+    return { success: fileDetails };
+  } catch (error) {
+    console.error('Error getting user files:', error);
+    return { failure: 'Could not retrieve file list. Please try again later.' };
+  }
+}
+
+export async function deleteUserFile(userId: string, fileName: string) {
+  if (!userId) {
+    return { failure: 'User not authenticated.' };
+  }
+  if (!fileName) {
+    return { failure: 'File name not provided.' };
+  }
+  try {
+    const filePath = `Data/${userId}/${fileName}`;
+
+    console.log(`Attempting to delete file: ${filePath}`);
+    await bucket.file(filePath).delete();
+    console.log(`Successfully deleted file: ${filePath}`);
+    return { success: true };
+    
+  } catch (error: any) {
+    console.error(`Error deleting file for user ${userId}:`, error);
+    if (error.code === 404) {
+      return { failure: 'File not found. It may have already been deleted.' };
+    }
+    return { failure: 'Could not delete the file. Please try again later.' };
   }
 }

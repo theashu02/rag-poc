@@ -27,7 +27,13 @@ export function Sidebar() {
     localStorage.removeItem('user-storage')
     signOut({ callbackUrl: "/" });
   }
-
+  
+  const HandleDoucuments = () => {
+    router.push("/documents");
+  }
+  const handleMenu = () => {
+    router.push("/application")
+  }
   // this userEffect render two times the page on reload and login
   // useEffect(()=>{
   //   if(!session){
@@ -68,9 +74,12 @@ export function Sidebar() {
         {/* Header with Toggle Button */}
         <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
           {!isCollapsed && (
-            <h2 className="text-lg font-semibold text-sidebar-foreground">
-              Menu
-            </h2>
+            // <h2 className="text-lg font-semibold text-sidebar-foreground">
+            //   Menu
+            // </h2>
+            <Button onClick={handleMenu} variant="ghost" className="text-3xl font-bold hover:cursor-pointer dark:text-amber-100 hover:bg-transparent dark:hover:bg-transparent">
+              SimplX
+            </Button>
           )}
           <Button
             variant="ghost"
@@ -119,10 +128,11 @@ export function Sidebar() {
                 </div>
                 <div className="space-y-1">
                   <Button
+                    onClick={HandleDoucuments}
                     variant="ghost"
                     className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent"
                   >
-                    Dashboard
+                    Documents
                   </Button>
                   <Button
                     variant="ghost"
