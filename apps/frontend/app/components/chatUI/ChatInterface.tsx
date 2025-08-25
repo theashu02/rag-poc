@@ -10,18 +10,14 @@ import {
 import { MessageBubble } from "./MessageBubble";
 import { ChatInput } from "./ChatInput";
 import { Button } from "@/components/ui/button";
-import {
-  Trash2,
-  MessageSquare,
-  Sparkles,
-  Zap,
-  Brain,
-  Lightbulb,
-} from "lucide-react";
+import { Trash2, MessageSquare, Sparkles, Zap, Brain, Lightbulb } from "lucide-react";
+import { useSession } from "next-auth/react";
+import AnimatedGreeting from "../common/AnimatedGreeting";
 
 export function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [pendingResponse, setPendingResponse] = useState<string>("");
+  const { data: session } = useSession();
 
   const dispatch = useDispatch<AppDispatch>();
   const { messages, isLoading, error, typingMessageId } = useSelector(
@@ -59,19 +55,9 @@ export function ChatInterface() {
       color: "from-purple-500 to-violet-600",
     },
     {
-      icon: Lightbulb,
-      text: "Help me brainstorm ideas",
-      color: "from-amber-500 to-orange-600",
-    },
-    {
       icon: Sparkles,
       text: "Write a creative story",
       color: "from-pink-500 to-rose-600",
-    },
-    {
-      icon: Zap,
-      text: "Analyze this problem",
-      color: "from-blue-500 to-indigo-600",
     },
   ];
 
@@ -102,16 +88,20 @@ export function ChatInterface() {
                 </div>
               </div>
 
-              <h2 className="text-4xl font-bold mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-1 gap-4 max-w-2xl mx-auto text-center mb-5">
+                <AnimatedGreeting />
+              </div>
+
+              <h2 className="text-4xl font-bold my-4">
                 Welcome to Your Knowledge-Powered AI Assistant
               </h2>
-              <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
+              <p className="text-md text-muted-foreground mb-8 leading-relaxed">
                 Harness the power of Retrieval-Augmented Generation to get precise,
                 trustworthy answers from your own data—instantly and effortlessly.
               </p>
 
               {/* Suggested Prompts */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto text-center mb-5">
                 {suggestedPrompts.map((prompt, index) => {
                   const IconComponent = prompt.icon;
                   return (

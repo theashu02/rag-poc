@@ -186,3 +186,17 @@ html {
   animation: gradient-shift 8s ease infinite;
   background-size: 200% 200%;
 }
+
+/* Added custom animation for gradient sweep effect */
+@keyframes gradient-sweep {
+  0% {
+    background-position: -1000px 0px;
+  }
+  100% {
+    background-position: 1000px 0px;
+  }
+}
+
+.animate-gradient-sweep {
+  animation: gradient-sweep 2s ease-in-out;
+}
