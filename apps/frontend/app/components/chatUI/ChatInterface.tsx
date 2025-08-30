@@ -10,14 +10,12 @@ import {
 import { MessageBubble } from "./MessageBubble";
 import { ChatInput } from "./ChatInput";
 import { Button } from "@/components/ui/button";
-import { Trash2, MessageSquare, Sparkles, Zap, Brain, Lightbulb } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { Trash2, MessageSquare, Sparkles, Brain } from "lucide-react";
 import AnimatedGreeting from "../common/AnimatedGreeting";
 
 export function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [pendingResponse, setPendingResponse] = useState<string>("");
-  const { data: session } = useSession();
 
   const dispatch = useDispatch<AppDispatch>();
   const { messages, isLoading, error, typingMessageId } = useSelector(

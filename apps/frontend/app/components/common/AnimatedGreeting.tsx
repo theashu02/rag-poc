@@ -9,9 +9,7 @@ export default function AnimatedGreeting() {
   const { data: session } = useSession();
 
   useEffect(() => {
-    // Start animation after component mounts
     const timer = setTimeout(() => setIsAnimating(true), 100)
-
     const completeTimer = setTimeout(() => setAnimationComplete(true), 3000)
 
     return () => {
@@ -23,7 +21,7 @@ export default function AnimatedGreeting() {
   return (
     <div className={`text-wrapper`}>
       <h1
-        className={`text-3xl md:text-3xl font-bold transition-all duration-1000 ${
+        className={`text-3xl md:text-4xl font-bold transition-all duration-1000 ${
           isAnimating ? "animate-gradient-sweep" : ""
         }`}
         style={{
