@@ -47,33 +47,33 @@ const ALLOWED_FILE_TYPES = [
   'application/pdf',
 ];
 
-const getNextFileName = async (originalFileName: string, userId: string) => {
-  try {
+// const getNextFileName = async (originalFileName: string, userId: string) => {
+//   try {
 
-    const prefix = `Data/${userId}/`;
-    const [files] = await bucket.getFiles({ 
-      prefix,
-      maxResults: 1000 // Add limit to avoid timeout on large buckets
-    });
+//     const prefix = `Data/${userId}/`;
+//     const [files] = await bucket.getFiles({ 
+//       prefix,
+//       maxResults: 1000 // Add limit to avoid timeout on large buckets
+//     });
     
-    const fileNumbers = files
-      .map((file: any) => {
-        const match = file.name.match(new RegExp(`^${prefix}file(\\d+)\\..+$`));
-        return match ? parseInt(match[1], 10) : 0;
-      })
-      .filter((num: number) => num > 0);
+//     const fileNumbers = files
+//       .map((file: any) => {
+//         const match = file.name.match(new RegExp(`^${prefix}file(\\d+)\\..+$`));
+//         return match ? parseInt(match[1], 10) : 0;
+//       })
+//       .filter((num: number) => num > 0);
 
-    const nextFileNumber = fileNumbers.length > 0 ? Math.max(...fileNumbers) + 1 : 1;
-    const extension = path.extname(originalFileName);
-    return `file${nextFileNumber}${extension}`;
-  } catch (error) {
-    console.error('Error getting next file name:', error);
-    // Fallback to timestamp-based naming
-    const timestamp = Date.now();
-    const extension = path.extname(originalFileName);
-    return `file_${timestamp}${extension}`;
-  }
-};
+//     const nextFileNumber = fileNumbers.length > 0 ? Math.max(...fileNumbers) + 1 : 1;
+//     const extension = path.extname(originalFileName);
+//     return `file${nextFileNumber}${extension}`;
+//   } catch (error) {
+//     console.error('Error getting next file name:', error);
+//     // Fallback to timestamp-based naming
+//     const timestamp = Date.now();
+//     const extension = path.extname(originalFileName);
+//     return `file_${timestamp}${extension}`;
+//   }
+// };
 
 const actionSchema = z.object({
   name: z.string().min(1),
@@ -96,7 +96,8 @@ export async function getSignedUrl(rawInput: { name: string; type: string; size:
       return { failure: `File type "${input.type}" is not allowed.` };
     }
     
-    const newFileName = await getNextFileName(input.name, userId);
+    // const newFileName = await getNextFileName(input.name, userId);
+    const newFileName = input.name;
     const filePath = `Data/${userId}/${newFileName}`;
 
     console.log('Generating signed URL for:', filePath);
@@ -104,7 +105,7 @@ export async function getSignedUrl(rawInput: { name: string; type: string; size:
     const options = {
       version: 'v4' as const,
       action: 'write' as const,
-      expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+      expires: Date.now() + 15 * 60 * 1000, 
       contentType: input.type,
     };
 
