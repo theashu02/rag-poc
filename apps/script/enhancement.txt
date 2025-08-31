@@ -1,0 +1,6 @@
+gpt-4o
+
+text-embedding-large
+
+token-overlap - 150 token
+

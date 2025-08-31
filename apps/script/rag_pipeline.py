@@ -1,257 +1,271 @@
-#!/usr/bin/env python3
-"""
-Optimised RAG indexing pipeline.
-
-• Reads PDF / TXT files (easy to extend for CSV / JSON …)
-• Cleans & semantic-chunks text with context windows
-• Enriches every chunk with entities, keywords, summaries, token-count
-• Generates dense OpenAI embeddings  (cached) + sparse TF-IDF vectors
-• Uploads to Pinecone under a user-supplied namespace
-• Retry logic & progress output
-"""
-
-import os, time, json, hashlib, argparse
-from dataclasses import dataclass
+import os
+import time
+import hashlib
 from typing import List, Dict
+from dataclasses import dataclass
 
-import pdfplumber, PyPDF2, spacy, yake, tiktoken, nltk
+import pandas as pd
+import numpy as np
+import spacy
+import yake
+import tiktoken
+import nltk
 from keybert import KeyBERT
 from sentence_transformers import CrossEncoder
-from sklearn.feature_extraction.text import TfidfVectorizer
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from openai import OpenAI
-from pinecone import Pinecone, Index
+from pinecone import Pinecone
+import PyPDF2
+import pdfplumber
 
-# ───────────────────────────────────────── Config
+# --- NLTK and spaCy model loading (should be pre-installed in Docker) ---
+# No runtime downloads; Dockerfile handles this.
+
 @dataclass
 class RAGConfig:
-    openai_api_key : str = os.getenv("OPENAI_API_KEY")
+    openai_api_key: str = os.getenv("OPENAI_API_KEY")
     pinecone_api_key: str = os.getenv("PINECONE_API_KEY")
-    index_name     : str = os.getenv("PINECONE_INDEX")
-    embedding_model: str = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
-    keyword_model  : str = "all-MiniLM-L6-v2"
-    reranker_model : str = "cross-encoder/ms-marco-MiniLM-L-12-v2"
-    chunk_size     : int = 800
-    chunk_overlap  : int = 150
-    batch_size     : int = 50
-    cache_dir      : str = "/tmp/cache"
+    index_name: str = os.getenv("PINECONE_INDEX")
+    embedding_model: str = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-large")
+    reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-12-v2"
+    keyword_model: str = "all-MiniLM-L6-v2"
+    chunk_size: int = 500
+    chunk_overlap: int = 100
+    batch_size: int = int(os.getenv("BATCH_SIZE", "50"))
+    cache_dir: str = "/tmp/cache"
 
-cfg = RAGConfig()
-os.makedirs(cfg.cache_dir, exist_ok=True)
+config = RAGConfig()
 
-# ────────────────────────────────── Model / service init
-print("⏳  Loading models …")
-nlp            = spacy.load("en_core_web_lg")
-kw_extractor   = yake.KeywordExtractor(n=3, top=10, dedupLim=0.7)
-keybert_model  = KeyBERT(model=cfg.keyword_model)
-cross_encoder  = CrossEncoder(cfg.reranker_model)
+# --- Initialization ---
+print("Initializing models and connections...")
 
-encoding       = tiktoken.encoding_for_model("gpt-4")
-client         = OpenAI(api_key=cfg.openai_api_key)
-pc             = Pinecone(api_key=cfg.pinecone_api_key)
+client = OpenAI(api_key=config.openai_api_key)
+pc = Pinecone(api_key=config.pinecone_api_key)
 
-# ────────────────────────────────── Pinecone index
-def setup_index() -> Index:
-    if cfg.index_name not in pc.list_indexes().names():
-        print(f"📗 Creating Pinecone index '{cfg.index_name}' …")
+# NLP Models
+nlp = spacy.load("en_core_web_lg")
+kw_extractor = yake.KeywordExtractor(n=3, top=15, dedupLim=0.9)
+keybert_model = KeyBERT(model=config.keyword_model)
+cross_encoder = CrossEncoder(config.reranker_model)
+encoding = tiktoken.encoding_for_model("gpt-4o")
+
+os.makedirs(config.cache_dir, exist_ok=True)
+
+# --- Pinecone Index Setup ---
+def setup_pinecone_index():
+    dimension = 3072  # for text-embedding-3-small
+    if config.index_name not in pc.list_indexes().names():
+        print(f"Creating index {config.index_name}...")
         pc.create_index(
-            name      = cfg.index_name,
-            dimension = 1536,
-            metric    = "cosine",
-            spec      = { "pod": { "environment": "gcp-starter" } }
+            name=config.index_name,
+            dimension=dimension,
+            metric="cosine",
+            spec={ "pod": { "environment": "gcp-starter" } }
         )
-        while not pc.describe_index(cfg.index_name).status['ready']:
+        while not pc.describe_index(config.index_name).status['ready']:
             time.sleep(1)
-    return pc.Index(cfg.index_name)
+    return pc.Index(config.index_name)
 
-index = setup_index()
+index = setup_pinecone_index()
 
-# ────────────────────────────────── Utilities
-tfidf_vectorizer = TfidfVectorizer(max_features=1_000, stop_words='english')
-
-def make_sparse(text:str)->Dict[int,float]:
-    vec = tfidf_vectorizer.transform([text])
-    if vec.nnz == 0: return {}
-    idx, vals = vec.indices, vec.data
-    return { int(i): float(v) for i,v in zip(idx, vals) }
-
-def normalize(txt:str)->str:
-    txt = txt.replace("\r\n","\n").replace("\r","\n")
-    txt = txt.replace('\x00','').replace('\xa0',' ')
-    return "\n".join(line.strip() for line in txt.splitlines() if line.strip())
-
-def read_pdf(path:str)->str|None:
+# --- Document Readers ---
+def read_pdf(path):
+    text = ""
     try:
         with pdfplumber.open(path) as pdf:
-            return normalize("\n".join(p.extract_text() or '' for p in pdf.pages))
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
     except Exception:
         try:
-            with open(path,'rb') as f:
-                return normalize("\n".join(p.extract_text() or '' for p in PyPDF2.PdfReader(f).pages))
+            with open(path, 'rb') as file:
+                pdf_reader = PyPDF2.PdfReader(file)
+                for page in pdf_reader.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
         except Exception:
             return None
+    return normalize_text(text) if text else None
 
-def read_txt(path:str)->str|None:
+def normalize_text(s: str) -> str:
+    s = s.replace("\r\n", "\n").replace("\r", "\n")
+    s = s.replace('\x00', '').replace('\xa0', ' ')
+    s = s.encode('utf-8', 'ignore').decode('utf-8')
+    return "\n".join([line.strip() for line in s.splitlines() if line.strip()])
+
+def read_txt(path):
     try:
-        with open(path,'r',encoding='utf-8',errors='ignore') as f:
-            return normalize(f.read())
+        with open(path, "r", encoding='utf-8', errors="ignore") as f:
+            return normalize_text(f.read())
     except Exception:
         return None
 
-splitter = RecursiveCharacterTextSplitter(
-    chunk_size = cfg.chunk_size,
-    chunk_overlap=cfg.chunk_overlap,
-    length_function = lambda t: len(encoding.encode(t)),
-    separators = ["\n\n", "\n", ". ", " ", ""]
-)
+# --- Text Processing ---
 
-# ────────────────────────────────── Embedding cache
-EMB_CACHE_FILE = os.path.join(cfg.cache_dir,"embeddings.pkl")
-EMB_CACHE: Dict[str,List[float]] = {}
-if os.path.exists(EMB_CACHE_FILE):
-    import pickle; EMB_CACHE.update(pickle.load(open(EMB_CACHE_FILE,'rb')))
+# keep the entities we care about
+KEEP_LABELS = {
+    "PERSON", "ORG", "GPE", "PRODUCT", "EVENT", "NORP", "FAC","LOC","WORK_OF_ART", "LAW", "LANGUAGE", "DATE", "TIME", "MONEY", "PERCENT",
+}
 
-def batch_embed(texts:List[str])->List[List[float]|None]:
-    out=[None]*len(texts)
-    uncached, idx = [], []
-    for i,t in enumerate(texts):
-        h=hashlib.md5(t.encode()).hexdigest()
-        if h in EMB_CACHE: out[i]=EMB_CACHE[h]
-        else: uncached.append(t); idx.append(i)
+class EnhancedTextProcessor:
+    def extract_entities(self, text: str) -> List[str]:
+        doc = nlp(text[:1000000])
+        entities = [ent.text for ent in doc.ents if ent.label_ in KEEP_LABELS]
+        return list(set(entities))
 
-    for start in range(0,len(uncached),20):
-        batch = uncached[start:start+20]; retries=3
-        while retries:
-            try:
-                resp = client.embeddings.create(
-                    model=cfg.embedding_model, input=batch, encoding_format="float")
-                for j,d in enumerate(resp.data):
-                    out_idx = idx[start+j]
-                    out[out_idx]=d.embedding
-                    EMB_CACHE[hashlib.md5(batch[j].encode()).hexdigest()] = d.embedding
-                break
-            except Exception as e:
-                print("⚠️ embed retry:",e); retries-=1; time.sleep(2)
-    return out
-
-def save_cache():
-    import pickle; pickle.dump(EMB_CACHE, open(EMB_CACHE_FILE,'wb'))
-
-# ────────────────────────────────── Processing
-def extract_keywords(text:str)->List[str]:
-    kws = [kw for kw,_ in kw_extractor.extract_keywords(text)][:5]
-    try:
-        kb = keybert_model.extract_keywords(text, keyphrase_ngram_range=(1,3),
-                                            stop_words='english', top_n=5)
-        kws.extend([kw for kw,_ in kb])
-    except Exception: pass
-    return list(set(kws))[:10]
-
-def extract_entities(text:str)->List[str]:
-    doc = nlp(text[:1_000_000])
-    ents = [e.text for e in doc.ents if e.label_ in
-           ("PERSON","ORG","GPE","PRODUCT","EVENT","LAW")]
-    return list(set(ents))[:10]
-
-def gpt_summary(text:str)->str:
-    if len(text)<100: return text
-    try:
-        resp = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role":"system","content":"Give a 2-sentence summary."},
-                {"role":"user","content":text[:2000]}
-            ],
-            max_tokens=100, temperature=0.3)
-        return resp.choices[0].message.content.strip()
-    except Exception:
-        return '. '.join(text.split('.')[:2]).strip()
-
-def chunk_document(text:str, meta:Dict)->List[Dict]:
-    chunks = splitter.split_text(text)
-    out=[]
-    for i,chunk in enumerate(chunks):
-        if len(chunk)<50: continue
-        ctx_before = chunks[i-1][-100:] if i>0 else ""
-        ctx_after  = chunks[i+1][:100]  if i+1<len(chunks) else ""
-        chunk_id = f"{meta['source']}-{hashlib.sha256(chunk.encode()).hexdigest()[:12]}"
-        out.append({
-            "id": chunk_id,
-            "text": chunk,
-            "metadata": {
-                **meta,
-                "chunk_index": i,
-                "total_chunks": len(chunks),
-                "chunk_keywords": extract_keywords(chunk),
-                "chunk_entities": extract_entities(chunk),
-                "chunk_summary": gpt_summary(chunk),
-                "context_before": ctx_before,
-                "context_after": ctx_after,
-                "token_count": len(encoding.encode(chunk))
-            }
-        })
-    return out
-
-def process_file(path:str)->List[Dict]:
-    ext=os.path.splitext(path)[1].lower()
-    text = read_pdf(path) if ext==".pdf" else read_txt(path)
-    if not text: return []
-
-    title = next((ln for ln in text.splitlines() if ln.strip()), os.path.basename(path))[:120]
-    base_meta={
-        "source": os.path.basename(path),
-        "file_type": ext[1:],
-        "title": title,
-        "doc_summary": gpt_summary(text[:3000]),
-        "ts": time.time()
-    }
-    return chunk_document(text, base_meta)
-
-def upload_chunks(chunks:List[Dict], ns:str)->int:
-    if not chunks: return 0
-    dense = batch_embed([c["text"] for c in chunks])
-    vectors=[]
-    for c,e in zip(chunks, dense):
-        if not e: continue
-        sparse = make_sparse(c["text"])
-        vectors.append({
-            "id": c["id"],
-            "values": e,
-            "sparse_values":{
-                "indices": list(sparse.keys()),
-                "values": list(sparse.values())
-            },
-            "metadata": { **c["metadata"], "text": c["text"] }
-        })
-    uploaded=0
-    for i in range(0,len(vectors),cfg.batch_size):
+    def extract_keywords(self, text: str) -> List[str]:
+        keywords = set()
+        yake_kws = [kw for kw, _ in kw_extractor.extract_keywords(text)]
+        keywords.update(yake_kws[:5])
         try:
-            index.upsert(vectors=vectors[i:i+cfg.batch_size], namespace=ns)
-            uploaded+=len(vectors[i:i+cfg.batch_size])
+            keybert_kws = keybert_model.extract_keywords(text, keyphrase_ngram_range=(1, 3), stop_words='english', top_n=5)
+            keywords.update([kw for kw, _ in keybert_kws])
+        except Exception:
+            pass
+        return list(keywords)[:10]
+
+    def generate_summary(self, text: str) -> str:
+        if len(text) < 100:
+            return text
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages = [
+                    {
+                        "role": "system",
+                        "content": (
+                            "- You are a precise summarization assistant. "
+                            "- Produce exactly three clear, self-contained sentences capturing the most critical facts, "
+                            "definitions, figures, and outcomes. Avoid opinions, redundancy, and quotes. "
+                            "- Use neutral, domain-appropriate language."
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": text[:3000],
+                    },
+                ],
+                max_tokens=100,
+                temperature=0.3
+            )
+            return response.choices[0].message.content.strip()
+        except Exception:
+            return '. '.join(text.split('.')[:2]).strip()
+
+processor = EnhancedTextProcessor()
+
+# --- Chunking ---
+class SemanticChunker:
+    def __init__(self):
+        self.splitter = RecursiveCharacterTextSplitter(
+            chunk_size=config.chunk_size,
+            chunk_overlap=config.chunk_overlap,
+            length_function=lambda text: len(encoding.encode(text)),
+            separators=["\n\n", "\n", ". ", " ", ""]
+        )
+
+    def chunk_with_context(self, text: str, metadata: Dict) -> List[Dict]:
+        chunks = self.splitter.split_text(text)
+        enhanced_chunks = []
+        for idx, chunk_text in enumerate(chunks):
+            enhanced_chunks.append({
+                "text": chunk_text,
+                "chunk_index": idx,
+                "total_chunks": len(chunks),
+                **metadata
+            })
+        return enhanced_chunks
+
+chunker = SemanticChunker()
+
+# --- Embedding Generation ---
+class EmbeddingGenerator:
+    def get_embeddings_batch(self, texts: List[str]) -> List[List[float]]:
+        if not texts:
+            return []
+        try:
+            response = client.embeddings.create(
+                model=config.embedding_model,
+                input=texts,
+                encoding_format="float"
+            )
+            return [data.embedding for data in response.data]
         except Exception as e:
-            print("⚠️  upsert retry:",e); time.sleep(2)
-    return uploaded
+            print(f"Batch embedding error: {e}")
+            return [None] * len(texts)
 
-def walk(folder:str)->List[str]:
-    return [os.path.join(r,f)
-            for r,_,fs in os.walk(folder)
-            for f in fs if f.lower().endswith(('.pdf','.txt'))]
+embedder = EmbeddingGenerator()
 
-def main(data_dir:str, namespace:str):
-    files = walk(data_dir)
-    total_chunks=total_vecs=0
-    for p in files:
-        ch = process_file(p)
-        total_chunks+=len(ch)
-        total_vecs += upload_chunks(ch, namespace)
-        print(f"✓ {os.path.basename(p):35}  chunks:{len(ch):3}  totalVec:{total_vecs}")
-    save_cache()
-    print(f"\n🎉 Done. Files:{len(files)}  Chunks:{total_chunks}  Vectors:{total_vecs}")
+# --- Main Processing Pipeline ---
+def process_file(file_path: str, original_filename: str) -> List[Dict]:
+    print(f"Processing: {original_filename}")
+    ext = os.path.splitext(original_filename)[1].lower()
+    text = None
+    if ext == ".pdf":
+        text = read_pdf(file_path)
+    elif ext == ".txt":
+        text = read_txt(file_path)
 
-# ────────────────────────────────── CLI
-if __name__ == "__main__":
-    ap = argparse.ArgumentParser(description="Optimised RAG pipeline")
-    ap.add_argument("--data",      default="./data", help="Directory with docs")
-    ap.add_argument("--namespace", required=True,   help="Pinecone namespace / userID")
-    args = ap.parse_args()
-    main(args.data, args.namespace)
+    if not text:
+        return []
+
+    base_metadata = {
+        "source": original_filename,
+        "file_type": ext[1:],
+        "processing_timestamp": time.time()
+    }
+    
+    chunks = chunker.chunk_with_context(text, base_metadata)
+    processed_chunks = []
+    for chunk_data in chunks:
+        if len(chunk_data["text"]) < 50:
+            continue
+        
+        chunk_hash = hashlib.sha256(chunk_data["text"].encode()).hexdigest()[:16]
+        chunk_id = f"{original_filename}-{chunk_hash}"
+        
+        metadata = {
+            **chunk_data,
+            "chunk_keywords": processor.extract_keywords(chunk_data["text"])
+        }
+        
+        processed_chunks.append({
+            "id": chunk_id,
+            "text": chunk_data["text"],
+            "metadata": metadata
+        })
+    return processed_chunks
+
+def upload_to_pinecone(chunks: List[Dict], namespace: str) -> int:
+    if not chunks:
+        return 0
+
+    texts = [c["text"] for c in chunks]
+    embeddings = embedder.get_embeddings_batch(texts)
+    
+    valid_chunks = []
+    for chunk, embedding in zip(chunks, embeddings):
+        if embedding:
+            metadata = chunk["metadata"]
+            metadata['text'] = chunk["text"]
+            valid_chunks.append({
+                "id": chunk["id"],
+                "values": embedding,
+                "metadata": metadata
+            })
+
+    if not valid_chunks:
+        return 0
+    
+    uploaded_count = 0
+    for i in range(0, len(valid_chunks), config.batch_size):
+        batch = valid_chunks[i:i+config.batch_size]
+        try:
+            index.upsert(vectors=batch, namespace=namespace)
+            uploaded_count += len(batch)
+            print(f"Uploaded {len(batch)} vectors to namespace '{namespace}'.")
+        except Exception as e:
+            print(f"Pinecone upload error: {e}")
+    return uploaded_count
