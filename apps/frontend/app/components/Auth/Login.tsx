@@ -54,7 +54,6 @@ export function LoginPage() {
           </div>
 
           {/* Google Login Button */}
-          {/* <Card className="border-border"> */}
             <CardContent className="p-6">
               <Button
                 onClick={handleGoogleLogin}
