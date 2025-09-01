@@ -23,8 +23,10 @@
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "keyword-extractor": "^0.0.28",
-    "lru-cache": "^11.1.0",
+    "lru-cache": "^6.0.0",
     "natural": "^8.1.0",
-    "openai": "^5.12.2"
+    "openai": "^5.12.2",
+    "wink-bm25-text-search": "^3.1.2",
+    "wink-nlp-utils": "^2.1.0"
   }
 }
