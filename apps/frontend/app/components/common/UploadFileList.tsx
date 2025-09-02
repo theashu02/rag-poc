@@ -298,7 +298,7 @@ export function UploadedFilesList() {
 
   if (error) {
     return (
-      <Card className="w-full shadow-sm">
+      <Card className="w-full shadow-sm rounded-none">
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2">
             <HardDrive className="h-5 w-5" />
@@ -322,7 +322,7 @@ export function UploadedFilesList() {
   }
 
   return (
-    <Card className="w-full shadow-sm border-border/50">
+    <Card className="w-full shadow-sm border-border/50 rounded-none">
       <CardHeader className="pb-6">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">

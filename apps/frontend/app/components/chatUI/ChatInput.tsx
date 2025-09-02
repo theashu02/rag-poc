@@ -4,7 +4,7 @@ import type React from "react";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { SendHorizontal , Square, ArrowUp, Paperclip, Mic, Plus } from "lucide-react";
+import { Square, ArrowUp, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FileUploader } from "../common/FileUpload";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -70,11 +70,6 @@ export function ChatInput({
                 rows={1}
               />
 
-              {/* <ResumableUploader /> */}
-              {/* <FileUploader /> */}
-
-              {/* Action buttons */}
-              {/* for enabling this make the max-w-3xl in div to 4xl */}
               <div className="absolute right-3 bottom-3 flex items-center gap-1">
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>

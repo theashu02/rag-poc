@@ -2,11 +2,14 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Menu } from "lucide-react";
+import { Menu, LogOut } from "lucide-react";
 import { Logo } from "./Logo";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 
 const navItems = [
   { href: "#features", label: "Features" },
@@ -19,6 +22,7 @@ const navItems = [
 export function Navbar() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const { data: session } = useSession();
 
   const handleClick = () => {
     router.push("/auth");
@@ -44,10 +48,47 @@ export function Navbar() {
         </ul>
 
         {/* desktop CTAs */}
-        <div className="hidden lg:flex gap-3">
-          <Button size="lg" className="bg-amber-200 text-md rounded-sm cursor-pointer" onClick={handleClick}>
-            SignIn/SignUp
-          </Button>
+        <div className="hidden lg:flex gap-3 items-center">
+          {session ? (
+            <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Avatar className="h-12 w-12 flex-shrink-0 cursor-pointer border-2 border-accent hover:shadow-lg transition rounded-full">
+                    <AvatarImage
+                      className="rounded-full"
+                      src={session?.user.image || "/placeholder.svg"}
+                      alt={session?.user.name || "Hi User"}
+                    />
+                    <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground">
+                      {session?.user?.name?.[0] || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="center"
+                  className="w-56 rounded-lg shadow-lg border border-accent bg-popover mt-4"
+                >
+                  <DropdownMenuLabel className="flex flex-col items-start gap-1 px-4 py-3">
+                    <span className="font-semibold text-sm">{session?.user?.name || "User"}</span>
+                    <span className="block max-w-full truncate text-xs text-muted-foreground">{session?.user?.email || ""}</span>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => signOut()}
+                    className="cursor-pointer px-4 py-2 text-sm rounded-md flex items-center gap-2 transition"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <span className="font-medium">{session?.user?.name?.split(" ")[0]}</span>
+            </>
+            ) : (
+              <Button size="lg" className="bg-amber-200 text-md rounded-sm cursor-pointer" onClick={handleClick}>
+                SignIn
+              </Button>
+            )}
         </div>
 
         {/* mobile menu */}
@@ -60,7 +101,7 @@ export function Navbar() {
 
           <SheetContent
             side="left"
-            className="flex flex-col gap-6 pt-16 w-3/4 sm:w-1/2"
+            className="flex flex-col gap-6 pt-8 w-[90vw] max-w-xs h-full overflow-y-auto sm:w-1/2 sm:max-w-sm pl-8"
           >
             {navItems.map((item) => (
               <Link
@@ -73,10 +114,22 @@ export function Navbar() {
               </Link>
             ))}
 
-            <div className="mt-auto flex flex-col gap-3">
-              <Button variant="secondary" onClick={() => setOpen(false)}>
-                SignIn/SignUp
-              </Button>
+            <div className="mt-auto flex flex-col gap-3 mb-8">
+              {session ? (
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-10 w-10 flex-shrink-0">
+                    <AvatarImage src={session?.user.image || "/placeholder.svg"} alt={session?.user.name || "Hi User"} />
+                    <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground">
+                      {session?.user?.name?.split(" ")[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="font-medium">{session?.user?.name?.split(" ")[0]}</span>
+                </div>
+              ) : (
+                <Button variant="secondary" onClick={() => setOpen(false)}>
+                  SignIn/SignUp
+                </Button>
+              )}
             </div>
           </SheetContent>
         </Sheet>

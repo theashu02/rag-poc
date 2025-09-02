@@ -266,7 +266,7 @@ export function Sidebar() {
               {!isCollapsed && (
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-sidebar-foreground truncate">{session?.user.name}</p>
-                  <p className="text-xs text-sidebar-foreground/70 truncate">{session?.user.email}</p>
+                  <p className="truncate text-xs text-muted-foreground">{session?.user?.email || ""}</p>
                 </div>
               )}
             </div>
