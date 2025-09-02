@@ -161,24 +161,24 @@ export function FileUploader() {
     switch (status) {
       case 'uploading':
         return (
-          <div className="w-full text-center p-8">
-            <LoaderCircle className="mx-auto h-12 w-12 text-primary animate-spin mb-4" />
+          <div className="w-full text-center p-3">
+            <LoaderCircle className="mx-auto h-12 w-12 text-primary animate-spin mb-3" />
             <p className="text-lg font-medium text-primary mb-2">Uploading...</p>
-            {file && <p className="text-muted-foreground mb-4">{file.name}</p>}
+            {file && <p className="text-muted-foreground mb-2 text-xs">{file.name}</p>}
             <Progress value={progress} className="w-full h-3" />
             <p className="text-sm font-medium text-primary mt-2">{Math.round(progress)}%</p>
-            <Button variant="outline" size="sm" className="mt-6" onClick={handleCancel}>Cancel</Button>
+            <Button variant="outline" size="sm" className="mt-4" onClick={handleCancel}>Cancel</Button>
           </div>
         );
       case 'success':
         return (
-          <div className="w-full text-center p-8">
+          <div className="w-full text-center p-3">
             <CheckCircle2 className="mx-auto h-16 w-16 text-green-500 mb-4 animate-in fade-in zoom-in-50 duration-500" />
-            <h3 className="text-2xl font-bold text-primary mb-2">Upload Successful!</h3>
+            <h3 className="text-lg font-bold text-primary mb-2">Upload Successful!</h3>
             {uploadedFile && (
-              <div className="text-muted-foreground text-sm space-y-1">
-                <p>Original name: <span className="font-medium text-foreground">{uploadedFile.originalFileName}</span></p>
-                <p>Stored as: <span className="font-medium text-foreground">{uploadedFile.newFileName}</span></p>
+              <div className="text-muted-foreground text-xs space-y-1">
+                <p>File name: <span className="font-medium text-foreground">{uploadedFile.originalFileName}</span></p>
+                {/* <p>Stored as: <span className="font-medium text-foreground">{uploadedFile.newFileName}</span></p> */}
               </div>
             )}
             <Button className="mt-8" onClick={handleReset}>Upload Another File</Button>
@@ -201,15 +201,15 @@ export function FileUploader() {
         return (
           <div
             className={cn(
-              "relative border-2 border-dashed rounded-lg p-8 text-center transition-colors duration-300 cursor-pointer h-64 flex flex-col items-center justify-center",
+              "relative border-2 border-dashed rounded-lg p-8 text-center transition-colors duration-300 cursor-pointer h-48 flex flex-col items-center justify-center",
               status === 'dragging' ? 'border-primary bg-accent/20' : 'border-border hover:border-primary/50'
             )}
             onClick={() => inputRef.current?.click()}
           >
             <UploadCloud className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-semibold text-foreground">Drag & drop your file here</p>
-            <p className="text-muted-foreground mt-1">or click to browse</p>
-            <p className="text-xs text-muted-foreground mt-4">Supports: JSON, TXT, TSV, CSV, PDF (up to 5GB)</p>
+            <p className="text-sm font-semibold text-foreground">Drag & drop file</p>
+            <p className="text-muted-foreground text-xs mt-1">or click to browse</p>
+            <p className="text-[10px] text-muted-foreground mt-4">Supports: JSON, TXT, TSV, CSV, PDF (up to 5GB)</p>
             <input
               ref={inputRef}
               type="file"

@@ -159,7 +159,7 @@ onDownload: (file: UserFile) => void
 )
 
 const LoadingSkeleton = () => (
-  <Card className="w-full">
+  <Card className="w-full rounded-none">
     <CardHeader className="pb-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">

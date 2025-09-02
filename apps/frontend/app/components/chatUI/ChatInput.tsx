@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Square, ArrowUp, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { FileUploader } from "../common/FileUpload";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+// import { FileUploader } from "../common/FileUpload";
+// import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -71,7 +71,7 @@ export function ChatInput({
               />
 
               <div className="absolute right-3 bottom-3 flex items-center gap-1">
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                {/* <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>
                     <Button
                       variant="ghost"
@@ -87,7 +87,7 @@ export function ChatInput({
                     </DialogHeader>
                     <FileUploader />
                   </DialogContent>
-                </Dialog>
+                </Dialog> */}
                 {/* <Button
                   variant="ghost"
                   size="sm"
