@@ -50,7 +50,7 @@ export function ChatInput({
 
   return (
     <div className="backdrop-blur-xl bg-card/80 border-t border-border/50 p-6 shadow-lg">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-2xl mx-auto">
         <div className="relative flex items-end gap-4">
           <div className="flex-1 relative">
             <div className="relative rounded-2xl bg-background border dark:border-gray-800/90 shadow-sm dark:shadow-lg dark:hover:shadow-xl transition-all duration-200 hover:border-primary/30">

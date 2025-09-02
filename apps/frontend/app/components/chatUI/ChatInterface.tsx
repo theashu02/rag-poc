@@ -62,7 +62,7 @@ export function ChatInterface() {
   return (
     <div className="flex flex-col h-screen w-screen bg-gradient-to-br from-background via-card to-background">
       {/* Header */}
-      <div className="flex flex-col absolute top-16 right-6 gap-3 z-50">
+      <div className="flex flex-col absolute top-16 right-24 gap-3 z-50">
         {messages.length > 0 && (
           <Button
             variant="destructive"

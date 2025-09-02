@@ -2,19 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { 
-  AudioWaveform, 
-  Video, 
-  GitBranch, 
-  FileText, 
-  ChevronDown,
-  PanelRightClose,
-  PanelRightOpen,
-  Plus,
-  Menu
-} from "lucide-react";
+import { AudioWaveform, Video, GitBranch, FileText, PanelRightClose, PanelRightOpen} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FileUploader } from "./FileUpload";
 
@@ -24,15 +12,7 @@ interface StudioSidebarProps {
 }
 
 export function StudioSidebar({ isCollapsed = false, onToggle }: StudioSidebarProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  const studioFeatures = [
-    {
-      icon: AudioWaveform,
-      title: "Audio Overview",
-      description: "Generate audio summaries"
-    }
-  ];
+  // const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <div 
@@ -60,7 +40,7 @@ export function StudioSidebar({ isCollapsed = false, onToggle }: StudioSidebarPr
       </div>
 
       {/* Collapsed State */}
-      {/* {isCollapsed && (
+      {isCollapsed && (
         <div className="flex flex-col items-center p-4 space-y-4">
           <Button
             variant="ghost"
@@ -91,7 +71,7 @@ export function StudioSidebar({ isCollapsed = false, onToggle }: StudioSidebarPr
             <FileText size={20} />
           </Button>
         </div>
-      )} */}
+      )}
 
       {/* Expanded State */}
       {!isCollapsed && (
