@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { toast } from "sonner";
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/store/store';
-import { addFile, UserFile } from '@/store/fileSlice';
+import { addFile, UserFile } from '@/store/slices/fileSlice';
 
 type Status = 'idle' | 'dragging' | 'uploading' | 'success' | 'error';
 type UploadedFileDetails = { originalFileName: string; newFileName: string };

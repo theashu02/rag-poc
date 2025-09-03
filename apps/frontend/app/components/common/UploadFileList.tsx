@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react"
 import { useSelector, useDispatch } from "react-redux"
 import type { RootState, AppDispatch } from "@/store/store"
-import { fetchUserFiles, removeUserFile } from "@/store/fileSlice"
+import { fetchUserFiles, removeUserFile } from "@/store/slices/fileSlice"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
