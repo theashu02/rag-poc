@@ -1,9 +1,9 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
-import { useSelector } from "react-redux"
-import type { RootState } from "@/store/store"
-import { deleteUserFile, getUserFiles } from "@/lib/ApiStore/actions/uploadaction"
+import { useSelector, useDispatch } from "react-redux"
+import type { RootState, AppDispatch } from "@/store/store"
+import { fetchUserFiles, removeUserFile } from "@/store/fileSlice"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
@@ -109,7 +109,7 @@ const formatDate = (dateString: string) => {
 
 const FileCard = ({ file, onDownload, onDelete, isDeleting }: {
   file: UserFile
-onDownload: (file: UserFile) => void
+  onDownload: (file: UserFile) => void
   onDelete: (file: UserFile) => void
   isDeleting: boolean
 }) => (
@@ -195,9 +195,9 @@ const LoadingSkeleton = () => (
 
 export function UploadedFilesList() {
   const userId = useSelector((state: RootState) => state.user.userId)
-  const [files, setFiles] = useState<UserFile[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const dispatch = useDispatch<AppDispatch>()
+  const { files, isLoading, error } = useSelector((state: RootState) => state.files)
+
   const [searchQuery, setSearchQuery] = useState("")
   const [sortField, setSortField] = useState<SortField>("createdAt")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
@@ -231,36 +231,21 @@ export function UploadedFilesList() {
   }, [files, searchQuery, sortField, sortDirection])
 
   const fetchFiles = async (showRefreshLoader = false) => {
+    if (!userId) return
     if (showRefreshLoader) {
       setIsRefreshing(true)
-    } else {
-      setIsLoading(true)
     }
-    setError(null)
-
-    try {
-      const result = await getUserFiles(userId || "")
-
-      if (result.success) {
-        setFiles(result.success)
-      } else {
-        setError(result.failure || "Unknown error occurred")
-      }
-    } catch (err) {
-      setError("Failed to load files. Please try again.")
-    } finally {
-      setIsLoading(false)
+    await dispatch(fetchUserFiles(userId))
+    if (showRefreshLoader) {
       setIsRefreshing(false)
     }
   }
 
   useEffect(() => {
-    if (!userId) {
-      setIsLoading(false)
-      return
+    if (userId) {
+      dispatch(fetchUserFiles(userId))
     }
-    fetchFiles()
-  }, [userId])
+  }, [userId, dispatch])
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -282,17 +267,16 @@ export function UploadedFilesList() {
       return
     }
     setDeletingFile(file.name)
-    const result = await deleteUserFile(userId, file.name)
-    if (result.success) {
-      setFiles((currentFiles) => currentFiles.filter((f) => f.name !== file.name))
+    const result: any = await dispatch(removeUserFile({ userId, fileName: file.name }))
+    if (result.payload) {
       toast.success(`"${file.name}" has been deleted.`)
     } else {
-      toast.error(`Failed to delete file: ${result.failure}`)
+      toast.error(`Failed to delete file: ${result.error.message}`)
     }
     setDeletingFile(null)
   }
 
-  if (isLoading) {
+  if (isLoading && !isRefreshing) {
     return <LoadingSkeleton />
   }
 
@@ -542,4 +526,3 @@ export function UploadedFilesList() {
     </Card>
   )
 }
-

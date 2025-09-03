@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type DragEvent, useRef } from 'react';
+import { useDispatch } from 'react-redux';
 import { UploadCloud, CheckCircle2, XCircle, LoaderCircle } from 'lucide-react';
 import { getSignedUrl } from '@/lib/ApiStore/actions/uploadaction';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { toast } from "sonner";
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/store/store';
-
+import { addFile, UserFile } from '@/store/fileSlice';
 
 type Status = 'idle' | 'dragging' | 'uploading' | 'success' | 'error';
 type UploadedFileDetails = { originalFileName: string; newFileName: string };
@@ -33,6 +34,7 @@ export function FileUploader() {
   const inputRef = useRef<HTMLInputElement>(null);
   const xhrRef = useRef<XMLHttpRequest | null>(null);
   const userId = useSelector((state: RootState) => state.user.userId);
+  const dispatch = useDispatch();
 
   const handleFileSelect = (selectedFile: File | null) => {
     if (status === 'uploading') return;
@@ -73,7 +75,16 @@ export function FileUploader() {
         await uploadFile(fileToUpload, url);
         setStatus('success');
         setUploadedFile({ originalFileName, newFileName });
-        toast(`${originalFileName} has been successfully uploaded as ${newFileName}.`);
+
+        const newFile: UserFile = {
+          name: fileToUpload.name,
+          size: fileToUpload.size,
+          type: fileToUpload.type,
+          createdAt: new Date().toISOString(),
+        };
+        dispatch(addFile(newFile));
+
+        toast(`${originalFileName} has been successfully uploaded.`);
       }
     } catch (err: any) {
       setError(err.message || 'An unknown error occurred.');

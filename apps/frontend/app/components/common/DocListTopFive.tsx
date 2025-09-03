@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { getUserFiles } from "@/lib/ApiStore/actions/uploadaction"
+import { useMemo } from "react"
 import { useSelector } from "react-redux"
 import type { RootState } from "@/store/store"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
@@ -42,31 +41,13 @@ function truncateFileName(name: string, maxLength = 24) {
 }
 
 export function DocListTopFive() {
-  const userId = useSelector((state: RootState) => state.user.userId)
-  const [files, setFiles] = useState<UserFile[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const { files, isLoading } = useSelector((state: RootState) => state.files)
 
-  useEffect(() => {
-    async function fetchFiles() {
-      setIsLoading(true)
-      try {
-        const result = await getUserFiles(userId || "")
-        if (result.success) {
-          // Sort by createdAt descending and take 5
-          const sorted = result.success
-            .sort((a: UserFile, b: UserFile) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-            .slice(0, 5)
-          setFiles(sorted)
-        } else {
-          setFiles([])
-        }
-      } catch {
-        setFiles([])
-      }
-      setIsLoading(false)
-    }
-    if (userId) fetchFiles()
-  }, [userId])
+  const latestFiles = useMemo(() => {
+    return [...files]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 5)
+  }, [files])
 
   return (
     <Card className="w-full shadow-sm border-border/50 rounded-lg">
@@ -90,7 +71,7 @@ export function DocListTopFive() {
           <div className="text-muted-foreground text-sm text-center py-4">No files found</div>
         ) : (
           <ul className="space-y-3">
-            {files.map((file) => (
+            {latestFiles.map((file) => (
               <li key={file.id || file.name} className="flex flex-col">
                 {/* <span className="font-medium text-sm truncate">{file.name}</span> */}
                 <span className="font-medium text-sm truncate" title={file.name}>
