@@ -19,6 +19,8 @@ export function Sidebar() {
   const { data: session } = useSession()
   const dispatch = useDispatch<AppDispatch>()
 
+  console.log("current logged in user",session)
+
   const handleMouseEnter = () => setIsCollapsed(false)
   const handleMouseLeave = () => setIsCollapsed(true)
 

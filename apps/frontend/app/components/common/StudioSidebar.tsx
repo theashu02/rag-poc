@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { AudioWaveform, Video, GitBranch, FileText, PanelRightClose, PanelRightOpen} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FileUploader } from "./FileUpload";
+import { DocListTopFive } from "./DocListTopFive";
+import { useRouter } from "next/navigation";
+// import DocListTopFive from "./DocListTopFive";
 
 interface StudioSidebarProps {
   isCollapsed?: boolean;
@@ -13,11 +16,15 @@ interface StudioSidebarProps {
 
 export function StudioSidebar({ isCollapsed = false, onToggle }: StudioSidebarProps) {
   // const [isExpanded, setIsExpanded] = useState(false);
+  const router = useRouter();
+  const handleAllDocs = () => {
+     router.push("/documents");
+  }
 
   return (
     <div 
       className={cn(
-        "h-screen bg-studio-bg border-l border-studio-border transition-all duration-300 z-50",
+        "right-0 h-screen bg-studio-bg border-l border-studio-border transition-all duration-300 z-50",
         isCollapsed ? "w-16" : "w-80 md:w-[420px]"
       )}
     >
@@ -75,24 +82,17 @@ export function StudioSidebar({ isCollapsed = false, onToggle }: StudioSidebarPr
 
       {/* Expanded State */}
       {!isCollapsed && (
-        <div className="flex flex-col h-full p-3">
-          <FileUploader />
-          {/* Language Input Section */}
-          {/* <div className="p-4">
-            <div 
-              className={cn(
-                "bg-studio-card rounded-lg p-4 border border-studio-border transition-all duration-200",
-                isExpanded && "ring-2 ring-studio-accent"
-              )}
-              onClick={() => setIsExpanded(!isExpanded)}
-            >
-              <div className="text-sm text-studio-text-muted mb-2">
-                Create an Audio Overview in:
-              </div>
-              
-            </div>
-          </div> */}
-        </div>
+        <>
+          <div className="flex flex-col h-auto gap-2 p-1 mt-1 ml-2">
+            <FileUploader />
+          </div>
+          <div className="flex flex-col h-auto gap-2 p-1 mt-1 ml-2">
+            <DocListTopFive />
+          </div>
+          <div className="flex justify-center items-center w-full py-3 px-10">
+            <Button className="rounded-sm w-full cursor-pointer" variant="secondary" onClick={handleAllDocs}>All Documents</Button>
+          </div>
+        </>
       )}
     </div>
   );

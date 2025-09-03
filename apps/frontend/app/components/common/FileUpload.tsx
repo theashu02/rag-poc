@@ -201,7 +201,7 @@ export function FileUploader() {
         return (
           <div
             className={cn(
-              "relative border-2 border-dashed rounded-lg p-8 text-center transition-colors duration-300 cursor-pointer h-48 flex flex-col items-center justify-center",
+              "relative border-2 border-dashed rounded-lg p-2 text-center transition-colors duration-300 cursor-pointer h-48 flex flex-col items-center justify-center",
               status === 'dragging' ? 'border-primary bg-accent/20' : 'border-border hover:border-primary/50'
             )}
             onClick={() => inputRef.current?.click()}
@@ -224,13 +224,13 @@ export function FileUploader() {
 
   return (
     <Card 
-      className="w-full"
+      className="w-full p-0"
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      <CardContent className="p-4">
+      <CardContent className="p-2">
         {renderContent()}
       </CardContent>
     </Card>
