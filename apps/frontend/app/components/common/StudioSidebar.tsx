@@ -161,7 +161,7 @@ export function StudioSidebar({ isCollapsed = false, onToggle }: StudioSidebarPr
             isCollapsed && "opacity-0 w-0 overflow-hidden",
           )}
         >
-          Document Upload
+          Files
         </h2>
         <Button variant="ghost" size="sm" onClick={onToggle} className="text-studio-text hover:bg-studio-card-hover">
           {isCollapsed ? <PanelRightOpen size={20} /> : <PanelRightClose size={20} />}

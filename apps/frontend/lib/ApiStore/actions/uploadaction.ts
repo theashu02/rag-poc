@@ -153,6 +153,29 @@ export async function getSignedUrl(rawInput: { name: string; type: string; size:
   }
 }
 
+export async function getSignedUrls(
+  files: { name: string; type: string; size: number }[],
+  userId: string,
+) {
+  try {
+    const results = await Promise.all(
+      files.map((f) => getSignedUrl({ ...f, userId })),
+    )
+
+    const failures = results.filter((r) => 'failure' in r) as { failure: string }[]
+    if (failures.length) {
+      // just return the first error for simplicity
+      return { failure: failures[0].failure }
+    }
+
+    return {
+      success: results.map((r) => (r as any).success),
+    }
+  } catch (err: any) {
+    return { failure: err.message || 'Could not get signed URLs' }
+  }
+}
+
 // get the list based on the user id from the GCS
 export async function getUserFiles(userId: string) {
   if (!userId) {
