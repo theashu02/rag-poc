@@ -24,3 +24,9 @@ functions-framework
 pysqlite3-binary
 transformers>=4.40.0
 torch>=2.2.0
+
+#utilities
+tenacity
+python-dotenv
+aiohttp
+langchain
