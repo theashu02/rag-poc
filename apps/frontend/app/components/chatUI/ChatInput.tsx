@@ -49,7 +49,7 @@ export function ChatInput({
   }, [input]);
 
   return (
-    <div className="backdrop-blur-xl bg-card/80 border-t border-border/50 p-6 shadow-lg">
+    <div className="backdrop-blur-xl bg-card/80 border-t border-border/50 p-6">
       <div className="max-w-2xl mx-auto">
         <div className="relative flex items-end gap-4">
           <div className="flex-1 relative">

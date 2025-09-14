@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "@/components/providers";
-import InitUser from "./components/common/InitUser";
 
 export const metadata: Metadata = {
   title: "RAG-POC",
@@ -17,7 +16,6 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body>
         <Providers>
-          <InitUser />
           {children}
         </Providers>
       </body>

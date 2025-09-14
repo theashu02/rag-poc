@@ -32,11 +32,11 @@ export function Sidebar() {
     signOut({ callbackUrl: "/" })
   }
 
-  const HandleDoucuments = () => {
-    router.push("/documents")
-  }
+  // const HandleDoucuments = () => {
+  //   router.push("/documents")
+  // }
   const handleMenu = () => {
-    router.push("/")
+    router.push("/application")
   }
   const HandleHome = () => {
     router.push("/")
@@ -128,13 +128,13 @@ export function Sidebar() {
                   >
                     Home
                   </Button>
-                  <Button
+                  {/* <Button
                     onClick={HandleDoucuments}
                     variant="ghost"
                     className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent"
                   >
                     Documents
-                  </Button>
+                  </Button> */}
                   <Button
                     variant="ghost"
                     className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent"

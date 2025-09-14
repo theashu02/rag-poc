@@ -81,9 +81,9 @@ export function ChatInterface() {
           <div className="flex items-center justify-center h-full p-6">
             <div className="text-center max-w-2xl mx-auto">
               <div className="relative mb-8">
-                <div className="w-24 h-24 rounded-3xl dark:bg-stone-800 flex items-center justify-center mx-auto shadow-2xl">
+                {/* <div className="w-24 h-24 rounded-3xl dark:bg-stone-800 flex items-center justify-center mx-auto shadow-2xl">
                   <MessageSquare className="w-12 h-12" />
-                </div>
+                </div> */}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-1 gap-4 max-w-2xl mx-auto text-center mb-5">
