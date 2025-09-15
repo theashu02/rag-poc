@@ -1,6 +1,6 @@
 "use client"
 
-import type { Message } from "@/store/chat-store"
+import type { Message } from "@/store/slices/ChatStoreSlice"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { TypingAnimation } from "./TypingAnimation"
 import { User, Copy, Check, Sparkles } from "lucide-react"
@@ -56,7 +56,7 @@ export function MessageBubble({ message, responseContent }: MessageBubbleProps) 
             )}
           >
             {isTyping && responseContent ? (
-              <TypingAnimation messageId={message.id} content={responseContent} speed={25} />
+              <TypingAnimation messageId={message.id} content={responseContent} speed={10} />
             ) : (
               <div className="whitespace-pre-wrap break-words">
                 {message.content ||

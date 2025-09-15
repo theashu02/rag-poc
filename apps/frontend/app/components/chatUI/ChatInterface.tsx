@@ -1,17 +1,30 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useChatStore } from "@/store/chat-store";
+import { useSelector, useDispatch } from "react-redux";
+import type { RootState, AppDispatch } from "@/store/store";
+import {
+  sendMessage as sendMessageThunk,
+  clearMessages as clearMessagesAction,
+} from "@/store/slices/ChatStoreSlice";
 import { MessageBubble } from "./MessageBubble";
 import { ChatInput } from "./ChatInput";
 import { Button } from "@/components/ui/button";
-import { Trash2, MessageSquare, Sparkles, Zap, Brain, Lightbulb } from "lucide-react";
-import { ModeToggle } from "@/components/ThemeToggle";
+import { Trash2, MessageSquare, Sparkles, Brain } from "lucide-react";
+import AnimatedGreeting from "../common/AnimatedGreeting";
 
 export function ChatInterface() {
-  const { messages, isLoading, error, typingMessageId, sendMessage, clearMessages } = useChatStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [pendingResponse, setPendingResponse] = useState<string>("");
+
+  const dispatch = useDispatch<AppDispatch>();
+  const { messages, isLoading, error, typingMessageId } = useSelector(
+    (state: RootState) => state.chat
+  );
+
+  const sendMessage = (content: string) =>
+    dispatch(sendMessageThunk(content)).unwrap();
+  const clearMessages = () => dispatch(clearMessagesAction());
 
   // Auto-scroll to bottom with smooth behavior
   useEffect(() => {
@@ -21,10 +34,10 @@ export function ChatInterface() {
   const handleSendMessage = async (content: string) => {
     setPendingResponse("");
     try {
-      const result = await sendMessage(content);
+      const result = await sendMessage(content);  // thunk returns { messageId, content }
       setPendingResponse(result.content);
-    } catch (error) {
-      // error is already handled in the store and UI, keep UI stable
+    } catch {
+      /* error already stored in slice */
     }
   };
 
@@ -40,26 +53,16 @@ export function ChatInterface() {
       color: "from-purple-500 to-violet-600",
     },
     {
-      icon: Lightbulb,
-      text: "Help me brainstorm ideas",
-      color: "from-amber-500 to-orange-600",
-    },
-    {
       icon: Sparkles,
       text: "Write a creative story",
       color: "from-pink-500 to-rose-600",
-    },
-    {
-      icon: Zap,
-      text: "Analyze this problem",
-      color: "from-blue-500 to-indigo-600",
     },
   ];
 
   return (
     <div className="flex flex-col h-screen w-screen bg-gradient-to-br from-background via-card to-background">
       {/* Header */}
-      <div className="flex flex-col absolute top-16 right-6 gap-3 z-50">
+      <div className="flex flex-col absolute top-16 right-24 gap-3 z-50">
         {messages.length > 0 && (
           <Button
             variant="destructive"
@@ -70,7 +73,6 @@ export function ChatInterface() {
             <Trash2 className="size-4" />
           </Button>
         )}
-        <ModeToggle />
       </div>
 
       {/* Messages */}
@@ -79,20 +81,25 @@ export function ChatInterface() {
           <div className="flex items-center justify-center h-full p-6">
             <div className="text-center max-w-2xl mx-auto">
               <div className="relative mb-8">
-                <div className="w-24 h-24 rounded-3xl dark:bg-stone-800 flex items-center justify-center mx-auto shadow-2xl">
+                {/* <div className="w-24 h-24 rounded-3xl dark:bg-stone-800 flex items-center justify-center mx-auto shadow-2xl">
                   <MessageSquare className="w-12 h-12" />
-                </div>
+                </div> */}
               </div>
 
-              <h2 className="text-4xl font-bold mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-1 gap-4 max-w-2xl mx-auto text-center mb-5">
+                <AnimatedGreeting />
+              </div>
+
+              <h2 className="text-4xl font-bold my-4">
                 Welcome to Your Knowledge-Powered AI Assistant
               </h2>
-              <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-                Harness the power of Retrieval-Augmented Generation to get precise, trustworthy answers from your own data—instantly and effortlessly.
+              <p className="text-md text-muted-foreground mb-8 leading-relaxed">
+                Harness the power of Retrieval-Augmented Generation to get precise,
+                trustworthy answers from your own data—instantly and effortlessly.
               </p>
 
               {/* Suggested Prompts */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto text-center mb-5">
                 {suggestedPrompts.map((prompt, index) => {
                   const IconComponent = prompt.icon;
                   return (
@@ -150,7 +157,7 @@ export function ChatInterface() {
       <ChatInput
         onSend={handleSendMessage}
         disabled={isLoading}
-        placeholder="Your documents. Your data. Instant insights..."
+        placeholder="Instant insights..."
       />
     </div>
   );

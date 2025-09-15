@@ -10,6 +10,7 @@
   "devDependencies": {
     "@types/bun": "latest",
     "@types/cors": "^2.8.17",
+    "@types/lru-cache": "^7.10.9",
     "nodemon": "^3.1.0"
   },
   "peerDependencies": {
@@ -21,8 +22,13 @@
     "compromise": "^14.14.4",
     "cors": "^2.8.5",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
     "keyword-extractor": "^0.0.28",
+    "lru-cache": "^6.0.0",
     "natural": "^8.1.0",
-    "openai": "^5.12.2"
+    "openai": "^5.12.2",
+    "p-retry": "^7.0.0",
+    "wink-bm25-text-search": "^3.1.2",
+    "wink-nlp-utils": "^2.1.0"
   }
 }

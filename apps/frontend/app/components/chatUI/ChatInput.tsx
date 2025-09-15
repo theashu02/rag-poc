@@ -4,8 +4,10 @@ import type React from "react";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { SendHorizontal , Square, ArrowUp, Paperclip, Mic, Plus } from "lucide-react";
+import { Square, ArrowUp, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+// import { FileUploader } from "../common/FileUpload";
+// import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -16,10 +18,11 @@ interface ChatInputProps {
 export function ChatInput({
   onSend,
   disabled = false,
-  placeholder = "Your documents. Your data. Instant insights...",
+  placeholder = "Instant insights...",
 }: ChatInputProps) {
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   const handleSend = () => {
     const trimmedInput = input.trim();
@@ -46,11 +49,11 @@ export function ChatInput({
   }, [input]);
 
   return (
-    <div className="backdrop-blur-xl bg-card/80 border-t border-border/50 p-6 shadow-lg">
-      <div className="max-w-3xl mx-auto">
+    <div className="backdrop-blur-xl bg-card/80 border-t border-border/50 p-6">
+      <div className="max-w-2xl mx-auto">
         <div className="relative flex items-end gap-4">
           <div className="flex-1 relative">
-            <div className="relative rounded-full bg-background border  dark:border-gray-800/90 shadow-sm dark:shadow-lg dark:hover:shadow-xl transition-all duration-200 hover:border-primary/30">
+            <div className="relative rounded-2xl bg-background border dark:border-gray-800/90 shadow-sm dark:shadow-lg dark:hover:shadow-xl transition-all duration-200 hover:border-primary/30">
               <Textarea
                 ref={textareaRef}
                 value={input}
@@ -59,7 +62,7 @@ export function ChatInput({
                 placeholder={placeholder}
                 disabled={disabled}
                 className={cn(
-                  "min-h-[60px] max-h-[200px] resize-none border-0 bg-transparent rounded-full",
+                  "min-h-[60px] max-h-[200px] resize-none border-0 bg-transparent rounded-2xl",
                   "focus:ring-0 focus:outline-none",
                   "px-6 py-5 pr-32 text-[15px] leading-relaxed placeholder:text-muted-foreground",
                   "font-normal"
@@ -67,18 +70,25 @@ export function ChatInput({
                 rows={1}
               />
 
-              {/* Action buttons */}
-              {/* for enabling this make the max-w-3xl in div to 4xl */}
-              {/* <div className="absolute right-3 bottom-3 flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled
-                  className="h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200 hover:scale-105"
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-                <Button
+              <div className="absolute right-3 bottom-3 flex items-center gap-1">
+                {/* <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200 hover:scale-105"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Upload Files</DialogTitle>
+                    </DialogHeader>
+                    <FileUploader />
+                  </DialogContent>
+                </Dialog> */}
+                {/* <Button
                   variant="ghost"
                   size="sm"
                   disabled
@@ -93,8 +103,8 @@ export function ChatInput({
                   className="h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200 hover:scale-105"
                 >
                   <Mic className="w-4 h-4" />
-                </Button>
-              </div> */}
+                </Button> */}
+              </div>
             </div>
           </div>
 
