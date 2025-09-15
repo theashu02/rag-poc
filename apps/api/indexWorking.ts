@@ -153,15 +153,6 @@ async function generateAnswer(question: string, context: string): Promise<string
     temperature: 0.2,
     max_tokens: 600,
     messages: [
-      // {
-      //   role: "system",
-      //   content:
-      //     "You are a precise assistant. Answer ONLY from the provided context. If the answer is not present, say you don't have enough information. Keep it concise.",
-      // },
-      // {
-      //   role: "user",
-      //   content: `Context:\n${context}\n\nQuestion: ${question}\nAnswer:`,
-      // },
       {
         role: "system",
         content: `You are a helpful and precise assistant. Follow these rules:
@@ -190,7 +181,7 @@ async function rag(
   // Set default values for parameters not provided in the payload
   const topK = 25;
   const maxContextChars = 6000;
-  const maxDocs = 6;
+  const maxDocs = 5;
 
   const t0 = performance.now();
   
@@ -266,8 +257,20 @@ async function rag(
 }
 
 // ------- Routes -------
-app.get("/api/v1/health", (_req, res) => {
+app.get("/api/v1/health", async (req, res) => {
   res.status(200).json({ status: "ok" });
+  try {
+    const { userID } = req.body ?? "";
+    
+    if(!userID){
+      return res.status(400).json({  message: "invalid userID hit the api." })
+    }
+
+    res.json(userID);
+  } catch (error) {
+    console.error("Error userID", error);
+    res.status(500).json({ message: "Internal error.", error: error instanceof Error ? error.message : "Unknown" });
+  }
 });
 
 app.post("/api/v1/query", async (req, res) => {
