@@ -9,6 +9,7 @@
     "check-types": "turbo run check-types"
   },
   "devDependencies": {
+    "@types/lru-cache": "^7.10.9",
     "prettier": "^3.6.2",
     "turbo": "^2.5.5",
     "typescript": "5.8.3"
@@ -20,5 +21,8 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "lru-cache": "^11.1.0"
+  }
 }

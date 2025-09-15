@@ -1,0 +1,32 @@
+# Core RAG script dependencies
+pandas
+numpy
+spacy==3.7.2
+yake
+tiktoken
+nltk
+keybert
+sentence-transformers
+rank_bm25
+scikit-learn
+langchain-text-splitters
+openai
+pinecone
+python-dotenv
+PyPDF2
+pdfplumber
+
+# Google Cloud dependencies
+google-cloud-storage
+functions-framework
+
+# System dependencies
+pysqlite3-binary
+transformers>=4.40.0
+torch>=2.2.0
+
+#utilities
+tenacity
+python-dotenv
+aiohttp
+langchain

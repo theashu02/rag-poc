@@ -2,11 +2,28 @@ import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
 import { Pinecone } from "@pinecone-database/pinecone";
+import type { QueryResponse } from "@pinecone-database/pinecone";
 import { performance } from "perf_hooks";
+import nlp from "compromise";
+import { WordNet } from "natural";
+import cluster from "cluster";
+import os from "os";
+import { LRUCache as LRU } from "lru-cache";
+
+/* cluster – use all CPU cores */
+const cpuCount = os.cpus().length;
+if (cluster.isPrimary) {
+  console.log(`Primary ${process.pid} - forking ${cpuCount} workers`);
+  for (let i = 0; i < cpuCount; i++) cluster.fork();
+
+  cluster.on("exit", worker => {
+    console.log(`Worker ${worker.process.pid} died – starting replacement`);
+    cluster.fork();
+  });
+}
 
 const app = express();
-const PORT = process.env.PORT || 5000;
-
+const PORT = Number(process.env.PORT) || 5000;
 const OPENAI_KEY = process.env.OPENAI_API_KEY;
 const PINECONE_KEY = process.env.PINECONE_API_KEY;
 const PINECONE_INDEX = process.env.PINECONE_INDEX;
@@ -15,285 +32,418 @@ if (!OPENAI_KEY) throw new Error("Missing env: OPENAI_API_KEY");
 if (!PINECONE_KEY || !PINECONE_INDEX)
   throw new Error("Missing env: PINECONE_API_KEY or PINECONE_INDEX");
 
-const openai = new OpenAI({ apiKey: OPENAI_KEY });
+const openai = new OpenAI({
+  apiKey: OPENAI_KEY,
+  timeout: 15_000,
+  maxRetries: 2,
+});
+
 const pinecone = new Pinecone({ apiKey: PINECONE_KEY });
 const index = pinecone.Index(PINECONE_INDEX);
 
 app.use(cors({ origin: "http://localhost:3000" }));
-app.use(express.json());
+app.use(express.json({ limit: "5mb" }));
 
-type SourceInfo = {
-  id: string;
-  score: number;
-  source: string;
-  chunkIndex: number;
-  summary?: string;
-  entities?: string[];
-};
+// High-performance LRU caches
+class OptimizedCacheManager {
+  private embeddingCache = new LRU<string, any[]>({ max: 2000, ttl: 60 * 60 * 1000, updateAgeOnGet: true });
+  private paraphraseCache = new LRU<string, any[]>({ max: 1000, ttl: 30 * 60 * 1000, updateAgeOnGet: true });
+  private synonymCache  = new LRU<string, string>({ max: 1500, ttl: 2 * 60 * 60 * 1000, updateAgeOnGet: true });
+  private responseCache = new LRU<string, any[]>({ max: 500,  ttl: 10 * 60 * 1000, updateAgeOnGet: true });
 
-const CONTEXT_WINDOW_CHARS = 16_000;         // = 8000 tokens
+  getEmbedding(t: string)                { return this.embeddingCache.get(t)  || null; }
+  setEmbedding(t: string, e: number[])   { this.embeddingCache.set(t, e); }
+  getParaphrases(t: string)              { return this.paraphraseCache.get(t) || null; }
+  setParaphrases(t: string, p: string[]) { this.paraphraseCache.set(t, p); }
+  getSynonyms(t: string)                 { return this.synonymCache.get(t)    || null; }
+  setSynonyms(t: string, s: string)      { this.synonymCache.set(t, s); }
+  getResponse(k: string)                 { return this.responseCache.get(k)   || null; }
+  setResponse(k: string, r: any)         { this.responseCache.set(k, r); }
 
-async function embed(text: string): Promise<number[]> {
-  const { data } = await openai.embeddings.create({
-    model: "text-embedding-3-small",
-    input: text,
-  });
-  return data[0]?.embedding || [];
-}
-
-/* =========================================================
-   1)  RAGQueryEngine  — single function version
-   ========================================================= */
-async function queryEngine(
-  question: string,
-  topK = 50
-): Promise<{
-  answer: string;
-  sources: SourceInfo[];
-  documentsUsed: number;
-  totalRetrieved: number;
-  contextChars: number;
-  searchTime: number;
-}> {
-  const t0 = performance.now();
-
-  /* dense retrieval */
-  const queryVector = await embed(question);
-  const results = await index.query({
-    vector: queryVector,
-    topK: Math.min(Math.max(1, topK), 100),
-    includeMetadata: true,
-  });
-
-  const matches = results.matches ?? [];
-  if (!matches.length) {
-    return {
-      answer: "I couldn't find relevant information to answer your question.",
-      sources: [],
-      documentsUsed: 0,
-      totalRetrieved: 0,
-      contextChars: 0,
-      searchTime: (performance.now() - t0) / 1000,
-    };
-  }
-
-  /* context assembly */
-  const contextParts: string[] = [];
-  const sources: SourceInfo[] = [];
-  let charCount = 0;
-
-  for (let i = 0; i < matches.length; i++) {
-    const m = matches[i];
-    if(!m) continue;
-    const md = (m.metadata ?? {}) as Record<string, any>;
-    const chunk =
-      md.text ?? md.content ?? md.pageContent ?? md.page_content ?? "";
-    if (!chunk) continue;
-
-    if (charCount + chunk.length > CONTEXT_WINDOW_CHARS) break;
-
-    contextParts.push(`[Document ${i + 1}]\n${chunk}`);
-    charCount += chunk.length;
-
-    sources.push({
-      id: m.id,
-      score: m.score ?? 0,
-      source: md.source ?? "Unknown",
-      chunkIndex: md.chunk_index ?? 0,
-      summary: md.chunk_summary ?? "",
-      entities: md.chunk_entities ?? [],
-    });
-  }
-  const context = contextParts.join("\n\n");
-
-  /* final LLM answer */
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0.3,
-    max_tokens: 1000,
-    messages: [
-      {
-        role: "system",
-        content:
-          `You are a helpful assistant that answers questions based on the provided context.\n` +
-          `Guidelines:\n` +
-          `1. Answer ONLY with the information in the context.\n` +
-          `2. If the context is insufficient, say so.\n` +
-          `3. Be concise but comprehensive.\n` +
-          `4. Cite with [Document X] references where relevant.`,
-      },
-      {
-        role: "user",
-        content: `Context:\n${context}\n\nQuestion: ${question}\n\nAnswer:`,
-      },
-    ],
-  });
-
-  const answer = completion.choices[0]?.message?.content?.trim() ?? "";
-
-  return {
-    answer,
-    sources,
-    documentsUsed: contextParts.length,
-    totalRetrieved: matches.length,
-    contextChars: charCount,
-    searchTime: (performance.now() - t0) / 1000,
-  };
-}
-
-/* =========================================================
-   2)  RAGEvaluator helpers
-   ========================================================= */
-function precisionRecall(
-  expected: Set<string>,
-  retrieved: Set<string>
-): { precision: number; recall: number } {
-  const intersection = new Set([...expected].filter((x) => retrieved.has(x)));
-  const precision = retrieved.size ? intersection.size / retrieved.size : 0;
-  const recall = expected.size ? intersection.size / expected.size : 0;
-  return { precision, recall };
-}
-
-async function evaluateRetrievalQuality(testQueries: Array<any>) {
-  const precisions: number[] = [];
-  const recalls: number[] = [];
-  const mrrs: number[] = [];
-  const times: number[] = [];
-
-  for (const t of testQueries) {
-    const expected = new Set<string>(t.expected_sources || []);
-    const { sources, searchTime } = await queryEngine(t.question);
-    times.push(searchTime);
-    const retrievedIds = new Set(sources.map((s) => s.source));
-    const { precision, recall } = precisionRecall(expected, retrievedIds);
-    precisions.push(precision);
-    recalls.push(recall);
-
-    /* MRR */
-    let rr = 0;
-    for (let i = 0; i < sources.length; i++) {
-      const src = sources[i]?.source;
-      if(src && expected.has(src)){
-        rr = 1 / (i + 1);
-        break;
-      }
+  // quick fuzzy match for near-duplicate queries
+  findSimilarResponse(q: string) {
+    const qw = new Set(q.toLowerCase().split(/\s+/));
+    for (const [cachedQ, resp] of this.responseCache.entries()) {
+      const cw = new Set(cachedQ.toLowerCase().split(/\s+/));
+      const inter = [...qw].filter(x => cw.has(x));
+      if (inter.length / Math.max(qw.size, cw.size) > 0.85) return resp;
     }
-    mrrs.push(rr);
+    return null;
   }
+}
+const cache = new OptimizedCacheManager();
 
-  const avg = (arr: number[]) =>
-    arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+const embeddingQueue: Array<{ text: string; resolve: (e: number[]) => void; reject: (err: any) => void; }> = [];
+let   isProcessingEmbeddings = false;
 
-  return {
-    avg_precision: avg(precisions),
-    avg_recall: avg(recalls),
-    mrr: avg(mrrs),
-    avg_response_time: avg(times),
-    total_queries: testQueries.length,
-  };
+async function processEmbeddingQueue() {
+  if (isProcessingEmbeddings || embeddingQueue.length === 0) return;
+  isProcessingEmbeddings = true;
+
+  const BATCH_SIZE = 100;
+  while (embeddingQueue.length) {
+    const batch = embeddingQueue.splice(0, BATCH_SIZE);
+    try {
+      const { data } = await openai.embeddings.create({
+        model: "text-embedding-3-small",
+        input: batch.map(b => b.text),
+        dimensions: 1536,
+      });
+      batch.forEach((item, i) => {
+        const emb = data[i]?.embedding || [];
+        cache.setEmbedding(item.text, emb);
+        item.resolve(emb);
+      });
+    } catch (err) {
+      batch.forEach(it => it.reject(err));
+    }
+  }
+  isProcessingEmbeddings = false;
+}
+function embed(text: string): Promise<number[]> {
+  const cached = cache.getEmbedding(text);
+  if (cached) return Promise.resolve(cached);
+
+  return new Promise((resolve, reject) => {
+    embeddingQueue.push({ text, resolve, reject });
+    (embeddingQueue.length <= 10 ? setImmediate : setTimeout)(processEmbeddingQueue, 50);
+  });
 }
 
-async function evaluateAnswerQuality(testCases: Array<any>) {
-  const scores: number[] = [];
+class FastQueryProcessor {
+  private wn = new WordNet();
+  private static readonly WORD_REGEX = /\b\w{3,}\b/g;
 
-  for (const t of testCases) {
-    const { answer } = await queryEngine(t.question);
+  async expandWithSynonyms(query: string): Promise<string> {
+    const cached = cache.getSynonyms(query);
+    if (cached) return cached;
 
-    /* LLM-as-judge */
-    const resp = await openai.chat.completions.create({
-      model: "gpt-4o",
-      temperature: 0,
-      max_tokens: 10,
-      messages: [
-        {
-          role: "system",
-          content:
-            `Evaluate the quality of the generated answer compared to the expected answer.\n` +
-            `Score 1-5 (1 = wrong, 5 = perfect).  Return ONLY the number.`,
-        },
-        {
-          role: "user",
-          content:
-            `Question: ${t.question}\n\n` +
-            `Expected: ${t.expected_answer}\n\n` +
-            `Generated: ${answer}\n\n` +
-            `Score:`,
-        },
-      ],
+    if (query.length < 10) {
+      cache.setSynonyms(query, query);
+      return query;
+    }
+
+    const words = query.toLowerCase().match(FastQueryProcessor.WORD_REGEX) || [];
+    if (words.length === 0) return query;
+
+    const important = words.slice(0, 5);
+    const result = await Promise.race([
+      this.getSynonymsForWords(important),
+      new Promise<string>(res => setTimeout(() => res(query), 500)),
+    ]);
+
+    const final = typeof result === "string" ? result : query;
+    cache.setSynonyms(query, final);
+    return final;
+  }
+
+  private async getSynonymsForWords(words: string[]): Promise<string> {
+    const promises = words.map(word =>
+      new Promise<string>(resolve => {
+        const to = setTimeout(() => resolve(word), 100);
+        this.wn.lookup(word, results => {
+          clearTimeout(to);
+          const syns = results?.[0]?.synonyms?.slice(0, 1) ?? [];
+          resolve([word, ...syns].join(" "));
+        });
+      }),
+    );
+    const expanded = await Promise.all(promises);
+    return expanded.join(" ");
+  }
+
+  async paraphrases(query: string): Promise<string[]> {
+    const cached = cache.getParaphrases(query);
+    if (cached) return cached;
+
+    if (query.length < 15 || query.split(/\s+/).length <= 2) {
+      cache.setParaphrases(query, []);
+      return [];
+    }
+
+    try {
+      const completion = await Promise.race([
+        openai.chat.completions.create({
+          model: "gpt-4o",
+          temperature: 0.4,
+          max_tokens: 50,
+          messages: [
+            { role: "system", content: "Rephrase the query once. Be concise." },
+            { role: "user", content: query },
+          ],
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000)),
+      ]) as any;
+
+      const paraphrase = completion.choices[0]?.message.content?.trim();
+      const out = paraphrase ? [paraphrase] : [];
+      cache.setParaphrases(query, out);
+      return out;
+    } catch {
+      cache.setParaphrases(query, []);
+      return [];
+    }
+  }
+
+  entities(text: string): string[] {
+    const key = `entities:${text}`;
+    const cached = cache.getResponse(key);
+    if (cached) return cached;
+
+    const entities = Array.from(
+      new Set([
+        ...nlp(text).topics().out("array"),
+        ...nlp(text).people().out("array"),
+        ...nlp(text).places().out("array"),
+      ]),
+    ).slice(0, 5);
+
+    cache.setResponse(key, entities);
+    return entities;
+  }
+
+  async intent(query: string) {
+    const len = query.length;
+    const words = query.split(/\s+/).length;
+
+    if (len < 15 && words <= 2) {
+      return { expanded: query, alternatives: [query], entities: [], keywords: query.split(/\s+/) };
+    }
+
+    if (len < 30 && words <= 4) {
+      const expanded = await this.expandWithSynonyms(query);
+      return { expanded, alternatives: [query], entities: this.entities(query), keywords: query.split(/\s+/) };
+    }
+
+    try {
+      const [expanded, alts] = await Promise.race([
+        Promise.all([this.expandWithSynonyms(query), this.paraphrases(query)]),
+        new Promise((_, rej) => setTimeout(() => rej(new Error("Intent timeout")), 3000)),
+      ]) as [string, string[]];
+
+      return {
+        expanded,
+        alternatives: [query, ...alts].slice(0, 2),
+        entities: this.entities(query),
+        keywords: query.split(/\s+/).slice(0, 8),
+      };
+    } catch {
+      return {
+        expanded: query,
+        alternatives: [query],
+        entities: this.entities(query),
+        keywords: query.split(/\s+/).slice(0, 5),
+      };
+    }
+  }
+}
+
+/* ---------- High-Performance Search Engine ---------- */
+class HighPerformanceSearchEngine {
+  private qp = new FastQueryProcessor();
+  private searchCache = new LRU<string, QueryResponse>({
+    max: 200,
+    ttl: 5 * 60 * 1000,
+  });
+
+  // Wrap Pinecone query with caching and the correct return type
+  private async optimizedPineconeSearch(
+    embedding: number[],
+    topK: number,
+    namespace?: string
+  ): Promise<{ matches?: any[] }> {
+    const key = `search:${embedding.slice(0, 10).join(",")}:${topK}`;
+    const cached = this.searchCache.get(key);
+    if (cached) return cached;
+
+    const res = await index.query({
+      vector: embedding,
+      topK,
+      includeMetadata: true,
+      filter: namespace ? { userId: namespace } : undefined,
+    });
+    this.searchCache.set(key, res as any);
+    return res as any;
+  }
+
+  // Main multi-query search with deduplication and scoring
+  async search(query: string, topK = 20, namespace?: string) {
+    const key = `full_search:${query}:${topK}`;
+    const cached = cache.getResponse(key);
+    if (cached) return cached;
+
+    const { alternatives } = await this.qp.intent(query);
+    const limited = alternatives.slice(0, 2);
+    const embeddings = await Promise.all(limited.map(embed));
+
+    const results = await Promise.all(
+      embeddings.map((e) => this.optimizedPineconeSearch(e, topK, namespace))
+    );
+    const matches = results.map((r) => r.matches ?? []);
+
+    const scoreMap = new Map<string, number>();
+    const matchMap = new Map<string, any>();
+    matches.flat().forEach((m) => {
+      const s = scoreMap.get(m.id) || 0;
+      if ((m.score ?? 0) > s) {
+        scoreMap.set(m.id, m.score ?? 0);
+        matchMap.set(m.id, m);
+      }
     });
 
-    const score = Number(resp.choices[0]?.message?.content?.trim() || 0);
-    scores.push(isNaN(score) ? 0 : score);
+    const finalMatches = Array.from(matchMap.values()).sort(
+      (a, b) => (b.score ?? 0) - (a.score ?? 0)
+    );
+    cache.setResponse(key, finalMatches);
+    return finalMatches;
   }
-
-  const avg =
-    scores.length > 0
-      ? scores.reduce((a, b) => a + b, 0) / scores.length
-      : 0;
-
-  const distribution = scores.reduce<Record<number, number>>((acc, s) => {
-    acc[s] = (acc[s] || 0) + 1;
-    return acc;
-  }, {});
-
-  return {
-    avg_quality_score: avg,
-    score_distribution: distribution,
-    total_evaluated: scores.length,
-  };
 }
 
-/* =========================================================
-   3)  ROUTES
-   ========================================================= */
+class UltraFastRAGEngine {
+  private searcher = new HighPerformanceSearchEngine();
+  private CONTEXT_CHARS = 8_000;
+  private MAX_DOCS = 5;
 
-/* Health-check */
-app.get("/api/v1/health", (_, res) =>
-  res.status(200).json({ status: "API up & healthy" })
-);
+  async query(question: string) {
+    const qKey = `rag:${question}`;
+    const exact = cache.getResponse(qKey);
+    if (exact) return { ...exact, cached: true, searchTime: 0 };
 
-/* RAGQueryEngine endpoint */
+    const similar = cache.findSimilarResponse(question);
+    if (similar) return { ...similar, cached: true, searchTime: 0 };
+
+    const t0 = performance.now();
+    const matches = await this.searcher.search(question, 15);
+
+    if (!matches.length) {
+      const res = { answer: "I couldn't find relevant information to answer your question.", sources: [], searchTime: (performance.now() - t0) / 1000 };
+      cache.setResponse(qKey, res);
+      return res;
+    }
+
+    let chars = 0;
+    const ctx: string[] = [];
+    const sources: any[] = [];
+
+    for (let i = 0; i < Math.min(matches.length, this.MAX_DOCS); i++) {
+      const m = matches[i];
+      const md = (m.metadata ?? {}) as Record<string, any>;
+      const chunk = md.text ?? md.content ?? md.pageContent ?? md.page_content ?? "";
+      if (!chunk) continue;
+
+      if (chars + chunk.length > this.CONTEXT_CHARS && ctx.length >= 2) break;
+      chars += chunk.length;
+      ctx.push(`[Doc ${i + 1}] ${chunk}`);
+      sources.push({ id: m.id, score: m.score ?? 0, source: md.source ?? "Unknown" });
+      if (chars >= this.CONTEXT_CHARS) break;
+    }
+
+    const context = ctx.join("\n\n");
+
+    const completion = await Promise.race([
+      openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        temperature: 0.2,
+        max_tokens: 400,
+        messages: [
+            {
+              role: "system",
+              content: `You are a helpful assistant that answers questions based on the provided context.
+                Follow these guidelines:
+                1. Answer based ONLY on the information in the context
+                2. If the context doesn't contain enough information, say so
+                3. Be concise but comprehensive
+                4. Cite document numbers when referencing specific information`,
+            },
+            { role: "user", content: `Context:\n${context}\n\nQ: ${question}\nA:` },
+          ],
+      }),
+      new Promise((_, rej) => setTimeout(() => rej(new Error("OpenAI timeout")), 8000)),
+    ]) as any;
+
+    const result = {
+      answer: completion.choices[0]?.message.content?.trim() || "Unable to generate answer.",
+      sources,
+      searchTime: (performance.now() - t0) / 1000,
+      documentsUsed: ctx.length,
+      totalRetrieved: matches.length,
+      contextChars: chars,
+    };
+
+    cache.setResponse(qKey, result);
+    return result;
+  }
+}
+
+// request duplication
+const pendingRequests = new Map<string, Promise<any>>();
+function deduplicate<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  if (pendingRequests.has(key)) return pendingRequests.get(key) as Promise<T>;
+  const p = fn().finally(() => pendingRequests.delete(key));
+  pendingRequests.set(key, p);
+  return p;
+}
+
+const ragEngine = new UltraFastRAGEngine();
+
+app.get("/api/v1/health", (_, res) => {
+  res.setHeader("Cache-Control", "public, max-age=30");
+  res.status(200).json({ status: "API up & healthy", ts: Date.now() });
+});
+
 app.post("/api/v1/query", async (req, res) => {
   try {
-    const { query, topK } = req.body ?? {};
-    if (!query || typeof query !== "string")
+    const { query, namespace } = req.body ?? {};
+    if (!query || typeof query !== "string" || query.length > 500)
       return res.status(400).json({ message: "Invalid 'query' field." });
 
-    const result = await queryEngine(query, topK);
-    return res.json(result);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Internal Error" });
+    const clean = query.trim();
+    res.setHeader("Content-Type", "application/json");
+
+    const result = await Promise.race([
+      deduplicate(`query:${clean}`, () => ragEngine.query(clean)),
+      new Promise((_, rej) => setTimeout(() => rej(new Error("Request timeout")), 15000)),
+    ]);
+
+    res.json(result);
+  } catch (err) {
+    console.error("Query error:", err);
+    res.status(500).json({ message: "Internal error.", error: err instanceof Error ? err.message : "Unknown" });
   }
 });
 
-/* =========================================================
-   -- For offline testing purpose only
-   ========================================================= */
-
-/* Retrieval-quality evaluation */
-app.post("/api/v1/evaluate/retrieval", async (req, res) => {
-  try {
-    const { testQueries = [] } = req.body ?? {};
-    const metrics = await evaluateRetrievalQuality(testQueries);
-    return res.json(metrics);
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ message: "Evaluation failed" });
-  }
+app.get("/api/v1/stats", (_, res) => {
+  res.setHeader("Cache-Control", "public, max-age=10");
+  res.json({
+    caches: {
+      embeddings: cache["embeddingCache"].size,
+      responses: cache["responseCache"].size,
+      paraphrases: cache["paraphraseCache"].size,
+    },
+    performance: {
+      pendingRequests: pendingRequests.size,
+      embeddingQueue: embeddingQueue.length,
+      mem: process.memoryUsage(),
+    },
+    uptime: process.uptime(),
+  });
 });
 
-/* Answer-quality evaluation */
-app.post("/api/v1/evaluate/answer", async (req, res) => {
-  try {
-    const { testCases = [] } = req.body ?? {};
-    const metrics = await evaluateAnswerQuality(testCases);
-    return res.json(metrics);
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ message: "Evaluation failed" });
-  }
+process.on("SIGTERM", () => {
+  console.log("Shutting down gracefully...");
+  pendingRequests.clear();
+  process.exit(0);
 });
 
-app.listen(PORT);
-console.log(`API server listening on port ${PORT}`);
+setInterval(() => {
+  const mem = process.memoryUsage();
+  if (mem.heapUsed > 500 * 1024 * 1024) console.warn("High memory usage:", mem);
+}, 30000);
+
+if (!cluster.isPrimary) {
+  const start = Date.now();
+  app.listen(PORT, () => {
+    console.log(`🚀 Worker ${process.pid} running on http://localhost:${PORT}`);
+    console.log(`🎯 Startup time: ${Date.now() - start}ms`);
+  });
+}

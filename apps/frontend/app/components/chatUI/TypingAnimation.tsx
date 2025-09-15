@@ -1,55 +1,72 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useChatStore } from "@/store/chat-store"
+import { useEffect, useState, useRef } from "react";
+import { useDispatch } from "react-redux";
+import type { AppDispatch } from "@/store/store";               
+import {
+  updateMessageContent,
+  setMessageComplete,
+  setTypingMessageId,
+} from "@/store/slices/ChatStoreSlice";                          
 
 interface TypingAnimationProps {
-  messageId: string
-  content: string
-  speed?: number
-  onComplete?: () => void
+  messageId: string;
+  content: string;
+  speed?: number;
+  onComplete?: () => void;
 }
 
-export function TypingAnimation({ messageId, content, speed = 30, onComplete }: TypingAnimationProps) {
-  const [displayedContent, setDisplayedContent] = useState("")
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const { updateMessageContent, setMessageComplete, setTypingMessageId } = useChatStore()
+export function TypingAnimation({
+  messageId,
+  content,
+  speed = 10,
+  onComplete,
+}: TypingAnimationProps) {
+  const [displayedContent, setDisplayedContent] = useState("");
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const dispatch = useDispatch<AppDispatch>();                
+  const startTimeRef = useRef(0);
+  const currentIndexRef = useRef(0);
 
   useEffect(() => {
-    if (currentIndex < content.length) {
-      const timer = setTimeout(() => {
-        const nextChar = content[currentIndex]
-        const newContent = displayedContent + nextChar
+    currentIndexRef.current = 0;
+    startTimeRef.current = performance.now();
 
-        setDisplayedContent(newContent)
-        setCurrentIndex(currentIndex + 1)
+    const tick = () => {
+      const now = performance.now();
+      const elapsed = now - startTimeRef.current;
+      const nextIndex = Math.min(Math.floor(elapsed / speed), content.length);
 
-        updateMessageContent(messageId, newContent)
-      }, speed)
+      if (nextIndex > currentIndexRef.current) {
+        const newContent = content.slice(0, nextIndex);
+        setDisplayedContent(newContent);
+        setCurrentIndex(nextIndex);
+        currentIndexRef.current = nextIndex;
 
-      return () => clearTimeout(timer)
-    } else if (content.length > 0) {
-      // Animation complete
-      setMessageComplete(messageId)
-      setTypingMessageId(null)
-      onComplete?.()
-    }
-  }, [
-    currentIndex,
-    content,
-    displayedContent,
-    messageId,
-    speed,
-    updateMessageContent,
-    setMessageComplete,
-    setTypingMessageId,
-    onComplete,
-  ])
+        // update Redux store
+        dispatch(updateMessageContent({ id: messageId, content: newContent }));
+      }
+
+      if (nextIndex < content.length) {
+        requestAnimationFrame(tick);
+      } else {
+        dispatch(setMessageComplete(messageId));
+        dispatch(setTypingMessageId(null));
+        onComplete?.();
+      }
+    };
+
+    const rAF = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rAF);
+  }, [content, speed, messageId, dispatch, onComplete]);
 
   return (
     <div className="relative">
       <span className="whitespace-pre-wrap">{displayedContent}</span>
-      {currentIndex < content.length && <span className="inline-block w-2 h-5 bg-current animate-pulse ml-1" />}
+      {currentIndex < content.length && (
+        <span className="inline-block w-2 h-5 bg-current animate-pulse ml-1" />
+      )}
     </div>
-  )
+  );
 }
