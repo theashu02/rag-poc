@@ -2,7 +2,6 @@
 
 import { Storage, type File } from '@google-cloud/storage';
 import { z } from 'zod';
-import path from 'path';
 
 const gcsProjectId = process.env.GCS_PROJECT_ID;
 const gcsClientEmail = process.env.GCS_CLIENT_EMAIL;
@@ -224,5 +223,32 @@ export async function deleteUserFile(userId: string, fileName: string) {
       return { failure: 'File not found. It may have already been deleted.' };
     }
     return { failure: 'Could not delete the file. Please try again later.' };
+  }
+}
+
+export async function downloadUserFile(userId: string, fileName: string){
+  if (!userId) {
+    return { failure: 'User not autheticated.' };
+  }
+  if (!fileName) {
+    return { failure: 'File name not provided.' };
+  }
+  try {
+    const filePath = `Data/${userId}/${fileName}`;
+    const options = {
+      version: 'v4' as const,
+      action: 'read' as const,
+      expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+      responseDisposition: `attachment; filename="${fileName}"`,
+    }
+
+    const [url] = await bucket.file(filePath).getSignedUrl(options);
+    return { success: {url} };
+  } catch (error: any) {
+    console.log(`Error to dowm=nload the file ${userId}: `, error);
+    if(error.code === 404) {
+      return { failure: 'File not found, It may have not in the bucket.' };
+    }
+    return { failure: 'Could not able to download the file. Please try again later.' };
   }
 }

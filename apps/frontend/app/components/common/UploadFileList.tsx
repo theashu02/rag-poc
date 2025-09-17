@@ -15,6 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { downloadUserFile } from "@/lib/ApiStore/actions/uploadaction"
 
 type UserFile = {
   name: string
@@ -203,6 +204,7 @@ export function UploadedFilesList() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [deletingFile, setDeletingFile] = useState<string | null>(null)
+  const [downloadFile, setDownloadFile] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>("table")
 
   const filteredAndSortedFiles = useMemo(() => {
@@ -256,10 +258,42 @@ export function UploadedFilesList() {
     }
   }
 
-  const handleDownload = (file: UserFile) => {
-    // TODO: Implement download functionality
-    console.log("Download file:", file.name)
-  }
+  const handleDownload = async (file: UserFile) => {
+    if (!userId) {
+      toast.error("You must be logged in to download the files.");
+      return;
+    }
+    setDownloadFile(file.name);
+
+    const result: any = await downloadUserFile(userId, file.name);
+
+    try {
+      if (result.success?.url) {
+        const response = await fetch(result.success.url);
+        if (!response.ok) throw new Error("Network error");
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = file.name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+
+        toast.success(`"${file.name}" is ready to download.`);
+      } else if (result.failure) {
+        toast.error(`Failed to download file: ${result.failure}`);
+      } else {
+        toast.error("Failed to download file: Unknown error");
+      }
+    } catch (err: any) {
+      toast.error(`Failed to download file: ${err.message || err}`);
+    } finally {
+      setDownloadFile(null);
+    }
+  };
 
   const handleDelete = async (file: UserFile) => {
     if (!userId) {
@@ -499,7 +533,8 @@ export function UploadedFilesList() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-40">
-                                <DropdownMenuItem onClick={() => handleDownload(file)}>
+                                <DropdownMenuItem 
+                                  onClick={() => handleDownload(file)}>
                                   <Download className="mr-2 h-4 w-4" />
                                   Download
                                 </DropdownMenuItem>
