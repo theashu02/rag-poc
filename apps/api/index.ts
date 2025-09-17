@@ -2,29 +2,33 @@ import OpenAI from "openai";
 import { Pinecone } from "@pinecone-database/pinecone";
 import type { ScoredPineconeRecord } from "@pinecone-database/pinecone";
 import { performance } from "perf_hooks";
+import { generateGreetingResponse, generateSmallTalkResponse, isGreeting, isSmallTalk } from "./services/greeting";
+import { pinecone } from "./services/pinecone";
+import { openai } from "./services/openai";
+
 
 const PORT = Number(process.env.PORT) || 5000;
-const OPENAI_KEY = process.env.OPENAI_API_KEY;
-const PINECONE_KEY = process.env.PINECONE_API_KEY;
+// const OPENAI_KEY = process.env.OPENAI_API_KEY;
+// const PINECONE_KEY = process.env.PINECONE_API_KEY;
 const PINECONE_INDEX = process.env.PINECONE_INDEX;
 
 const OPENAI_EMBEDDING_MODEL = process.env.OPENAI_EMBEDDING_MODEL || "text-embedding-3-large";
 const EMBEDDING_DIM = Number(process.env.DIMENSIONS) || 3072;
 const OPENAI_CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini";
 
-if (!OPENAI_KEY) throw new Error("Missing env: OPENAI_API_KEY");
-if (!PINECONE_KEY || !PINECONE_INDEX) throw new Error("Missing env: PINECONE_API_KEY or PINECONE_INDEX");
+// if (!OPENAI_KEY) throw new Error("Missing env: OPENAI_API_KEY");
+// if (!PINECONE_KEY || !PINECONE_INDEX) throw new Error("Missing env: PINECONE_API_KEY or PINECONE_INDEX");
 
 console.log(`🚀 OPEN ai key is present`);
 console.log(`🚀 Pinecone key is present`);
 
-const openai = new OpenAI({
-  apiKey: OPENAI_KEY,
-  timeout: 30_000,
-  maxRetries: 2,
-});
+// const openai = new OpenAI({
+//   apiKey: OPENAI_KEY,
+//   timeout: 30_000,
+//   maxRetries: 2,
+// });
 
-const pinecone = new Pinecone({ apiKey: PINECONE_KEY });
+// const pinecone = new Pinecone({ apiKey: PINECONE_KEY });
 
 // const app = express();
 // app.use(cors({ origin: "*" }));
@@ -173,14 +177,28 @@ async function generateAnswer(question: string, context: string): Promise<string
   return completion.choices?.[0]?.message?.content?.trim() || "";
 }
 
-async function rag(
-  question: string,
-  namespace?: string
-) {
+async function rag(question: string, namespace?: string) {
   // Set default values for parameters not provided in the payload
-  const topK = 25;
-  const maxContextChars = 6000;
-  const maxDocs = 5;
+  
+  if(isGreeting(question)){
+    return {
+      answer: generateGreetingResponse(question),
+      sources: [],
+      latencySec: 0,
+    }
+  }
+
+  if(isSmallTalk(question)) {
+    return {
+      answer: generateSmallTalkResponse(question),
+      sources: [],
+      latencySec: 0,
+    }
+  }
+
+  const topK = 25; // ---->  this will increase the time
+  const maxContextChars = 6000; // ----> this will increase the chars
+  const maxDocs = 5; // ----> this will increase the max docs
 
   const t0 = performance.now();
   
@@ -189,8 +207,7 @@ async function rag(
 
     if (!denseMatches.length) {
       return {
-        answer:
-          "I couldn't find relevant information to answer your question from the current knowledge base.",
+        answer: "I couldn't find relevant information to answer your question from the current knowledge base.",
         sources: [],
         latencySec: (performance.now() - t0) / 1000,
       };
@@ -257,7 +274,6 @@ async function rag(
 
 console.log(`🚀 The pincone connected successfully.`);
 
-// ------- Routes -------
 // Define CORS headers
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*", // or restrict to a specific domain
@@ -266,6 +282,7 @@ const corsHeaders = {
 };
 
 // Bun server
+// ------- Routes -------
 Bun.serve({
   port: PORT,
   async fetch(req) {

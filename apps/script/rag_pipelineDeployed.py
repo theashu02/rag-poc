@@ -16,11 +16,6 @@ from openai import OpenAI
 from pinecone import Pinecone, ServerlessSpec
 import PyPDF2
 import pdfplumber
-import fitz
-import pytesseract
-from PIL import Image
-import io
-
 
 # --- Configuration ---
 @dataclass
@@ -110,56 +105,24 @@ os.makedirs(config.cache_dir, exist_ok=True)
 
 # --- Document Readers ---
 def read_pdf(path):
-    text_by_page: Dict[int, str] = {}
-    images_for_ocr = []
-    try:
-        doc = fitz.open(path)
-        for idx, page in enumerate(doc):
-            page_num = idx + 1
-            txt = page.get_text().strip()
-            text_by_page[page_num] = txt
-
-            if len(txt) < 50:
-                for img in page.get_images():
-                    pix = fitz.Pixmap(doc, img[0])
-                    if pix.n - pix.alpha < 4:
-                        images_for_ocr.append(
-                            {"page": page_num, "data": pix.tobytes("png")}
-                        )
-        doc.close()
-    except Exception as exc:                          
-        print(f"PyMuPDF extraction failed: {exc}")
-
-    for img in images_for_ocr:
-        try:
-            pil_img = Image.open(io.BytesIO(img["data"]))
-            ocr_txt = pytesseract.image_to_string(
-                pil_img, config="--oem 3 --psm 6"
-            ).strip()
-            if ocr_txt:
-                merged = f"{text_by_page.get(img['page'], '')}\n{ocr_txt}".strip()
-                text_by_page[img["page"]] = merged
-        except Exception as exc:                    
-            print(f"OCR failed (page {img['page']}): {exc}")
-
+    text = ""
     try:
         with pdfplumber.open(path) as pdf:
-            for idx, page in enumerate(pdf.pages):
-                page_num = idx + 1
-                extra = (page.extract_text() or "").strip()
-                if extra and extra not in text_by_page.get(page_num, ""):
-                    text_by_page[page_num] = (
-                        f"{text_by_page.get(page_num, '')}\n{extra}".strip()
-                    )
-    except Exception as exc:
-        print(f"pdfplumber extraction failed: {exc}")
-
-    if text_by_page:
-        full = "\n".join(
-            text_by_page[p] for p in sorted(text_by_page) if text_by_page[p]
-        )
-        return normalize_text(full) if full else None
-    return None
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
+    except Exception:
+        try:
+            with open(path, 'rb') as file:
+                pdf_reader = PyPDF2.PdfReader(file)
+                for page in pdf_reader.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
+        except Exception:
+            return None
+    return normalize_text(text) if text else None
 
 def read_txt(path):
     try:
