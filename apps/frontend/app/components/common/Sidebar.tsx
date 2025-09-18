@@ -11,6 +11,7 @@ import { ModeToggle } from "@/components/ThemeFiles/ThemeToggle"
 import { useDispatch } from "react-redux"
 import { clearUser } from "@/store/slices/UserStoreSlice"
 import type { AppDispatch } from "@/store/store"
+import { modernToast } from "@/lib/toast"
 
 export function Sidebar() {
   const router = useRouter()
@@ -26,18 +27,26 @@ export function Sidebar() {
 
   const toggleMobile = () => setIsMobileOpen(!isMobileOpen)
 
+  // const handleSignOut = () => {
+  //   dispatch(clearUser())
+  //   localStorage.removeItem("user-storage")
+  //   signOut({ callbackUrl: "/" })
+  //   modernToast.success(`Thanks for visiting, ${session?.user.name}!`)
+  // }
   const handleSignOut = () => {
-    dispatch(clearUser())
-    localStorage.removeItem("user-storage")
-    signOut({ callbackUrl: "/" })
+    modernToast.success(`Thanks for visiting, ${session?.user?.name || "User"}!`)
+    setTimeout(() => {
+      dispatch(clearUser())
+      localStorage.removeItem("user-storage")
+      localStorage.removeItem("app_toast_shown")
+      signOut({ callbackUrl: "/" })
+    }, 1200)
   }
 
-  // const HandleDoucuments = () => {
-  //   router.push("/documents")
-  // }
   const handleMenu = () => {
     router.push("/application")
   }
+
   const HandleHome = () => {
     router.push("/")
   }

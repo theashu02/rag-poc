@@ -6,6 +6,7 @@ import { signIn, useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import Loading from "../common/Loading"
+import { modernToast } from "@/lib/toast"
 
 export function LoginPage() {
   const { data: session, status } = useSession();
@@ -14,7 +15,7 @@ export function LoginPage() {
 
   useEffect(() => {
     if(session) {
-        router.push("/application");
+      router.push("/application");
     }
   }, [session, router])
 
@@ -28,11 +29,12 @@ export function LoginPage() {
 
   const handleGoogleLogin = async () => {
     try {
-        await signIn("google", { callbackUrl: "/application" })
+      await signIn("google", { callbackUrl: "/application" })
     } catch (error) {
-        console.error("Sign in error: ", error);
+      modernToast.warning(`Sign in error: ${error}`);
+      console.error("Sign in error: ", error);
     } finally{
-        setIsLoading(false)
+      setIsLoading(false)
     }
   }
 
@@ -41,7 +43,6 @@ export function LoginPage() {
       {/* Left Side - Login Form */}
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <div className="w-full max-w-sm space-y-8 p-8">
-          {/* Logo/Brand */}
           <Card className="border-border">
           <div className="text-center space-y-2">
             <div className="w-12 h-12 bg-primary rounded-lg mx-auto flex items-center justify-center">

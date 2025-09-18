@@ -243,3 +243,66 @@ html {
 .animate-gradient-sweep {
   animation: gradient-sweep 2s ease-in-out;
 }
+
+/* CSS for the sooner toast notification */
+.modern-toast {
+  transition: all 0.2s ease !important;
+  animation: toast-slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modern-toast:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Success Toast */
+.modern-toast[data-type="success"] {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: white !important;
+  border: none !important;
+}
+
+/* Error Toast */
+.modern-toast[data-type="error"] {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  color: white !important;
+  border: none !important;
+}
+
+/* Warning Toast */
+.modern-toast[data-type="warning"] {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+  color: white !important;
+  border: none !important;
+}
+
+/* Info Toast */
+.modern-toast[data-type="info"] {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  color: white !important;
+  border: none !important;
+}
+
+/* Slide Animation */
+@keyframes toast-slide-in {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0%);
+    opacity: 1;
+  }
+}
+
+/* Glassmorphism variant */
+.toast-glass {
+  background: rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark .toast-glass {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
