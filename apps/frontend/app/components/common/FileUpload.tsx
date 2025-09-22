@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { RootState } from "@/store/store";
 import { addFile, UserFile } from "@/store/slices/fileSlice";
+import { modernToast } from '@/lib/toast'
 
 type UploadStatus = "idle" | "uploading" | "success" | "error";
 
@@ -87,7 +88,7 @@ export function FileUploader() {
               createdAt: new Date().toISOString(),
             };
             dispatch(addFile(newReduxFile));
-            toast(`${originalFileName} uploaded`);
+            modernToast.info(`${originalFileName} uploaded`);
           })
         )
       );

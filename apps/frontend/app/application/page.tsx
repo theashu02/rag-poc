@@ -8,7 +8,7 @@ import { modernToast } from "@/lib/toast"
 import { useSession } from "next-auth/react"
 
 export default function page() {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const { data: session } = useSession();
 
   useEffect(() => {

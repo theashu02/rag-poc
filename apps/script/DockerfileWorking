@@ -1,19 +1,11 @@
 FROM python:3.12-slim
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        tesseract-ocr \
-        tesseract-ocr-eng \
-        libtesseract-dev && \
-    rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt \
     && python -m spacy download en_core_web_lg
 
-# Download NLTK data
 RUN python - <<'PY'
 import nltk
 nltk.download("wordnet")
@@ -29,9 +21,9 @@ RUN python - <<'PY'
 from sentence_transformers import SentenceTransformer, CrossEncoder
 from keybert import KeyBERT
 
-SentenceTransformer("all-MiniLM-L6-v2")
-CrossEncoder("cross-encoder/ms-marco-MiniLM-L-12-v2")
-KeyBERT(model="all-MiniLM-L6-v2")
+SentenceTransformer("all-MiniLM-L6-v2")                     
+CrossEncoder("cross-encoder/ms-marco-MiniLM-L-12-v2")       
+KeyBERT(model="all-MiniLM-L6-v2")                           
 PY
 
 ENV HF_HUB_OFFLINE=1
