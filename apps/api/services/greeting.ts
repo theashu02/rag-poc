@@ -1,5 +1,5 @@
 export function isGreeting(query: string): boolean {
-  const greetings = ["hello", "hi", "hey", "greetings", "good morning", "good afternoon", "good evening", "good night", "good noon", "g'day", "bonjour", "salut", "ciao", "namaste", "konnichiwa", "ni hao", "shalom", "hallo", "howdy", "hola", "what's up", "yo", "sup", "hi there", "hello there"];
+  const greetings = ["hello", "hi", "Hii", "Hi", "hey", "greetings", "good morning", "good afternoon", "good evening", "good night", "good noon", "g'day", "bonjour", "salut", "ciao", "namaste", "konnichiwa", "ni hao", "shalom", "hallo", "howdy", "hola", "what's up", "yo", "sup", "hi there", "hello there"];
 
   const cleanQuery = query.toLowerCase().trim();
   return greetings.some(
