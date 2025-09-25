@@ -247,6 +247,7 @@ async function generateAnswer(
   question: string,
   context: string
 ): Promise<string> {
+  console.log("----this is context----",context)
   const queuedTask = async (): Promise<string> => {
     try {
       const completion = await openai.chat.completions.create({
