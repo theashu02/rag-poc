@@ -62,7 +62,7 @@ def get_pinecone_index():
     if _pc is None:
         _pc = Pinecone(api_key=config.pinecone_api_key)
         
-    dimension = 3072  # for text-embedding-3-small
+    dimension = 1536  # for text-embedding-3-small
     if config.index_name not in _pc.list_indexes().names():
         print(f"Creating index {config.index_name}...")
         _pc.create_index(

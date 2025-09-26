@@ -2,6 +2,7 @@ import type { ScoredPineconeRecord } from "@pinecone-database/pinecone";
 import { performance } from "perf_hooks";
 import { generateGreetingResponse, generateSmallTalkResponse, isGreeting, isSmallTalk } from "./services/greeting";
 import { PORT, PINECONE_INDEX, OPENAI_EMBEDDING_MODEL, OPENAI_CHAT_MODEL, EMBEDDING_DIM, PromptForGenerateAnswer } from "./services/config";
+import { clean } from "./services/cleanQuery"
 import bm25PrepTasks from "./services/BM25_config";
 import { corsHeaders } from "./services/config";
 import { pinecone } from "./services/pinecone";
@@ -52,12 +53,6 @@ const chatQueue = new pQueue({
 type Meta = Record<string, any>;
 type Match = ScoredPineconeRecord<Meta>;
 
-
-// Utility functions
-function clean(text: string): string {
-  return text.replace(/\s+/g, " ").trim();
-}
-
 function generateCacheKey(query: string, namespace?: string): string {
   return createHash("sha256")
     .update(`${query}:${namespace || "default"}`)
@@ -87,7 +82,7 @@ async function embed(text: string): Promise<number[]> {
     try {
       const { data } = await openai.embeddings.create({
         model: OPENAI_EMBEDDING_MODEL,
-        input: clean(text),
+        input: await clean(text),
         dimensions: EMBEDDING_DIM,
       });
 
@@ -243,11 +238,7 @@ async function retrieve(
   throw lastError || new Error("All retrieve attempts failed");
 }
 
-async function generateAnswer(
-  question: string,
-  context: string
-): Promise<string> {
-  console.log("----this is context----",context)
+async function generateAnswer(question: string, context: string): Promise<string> {
   const queuedTask = async (): Promise<string> => {
     try {
       const completion = await openai.chat.completions.create({
@@ -376,7 +367,7 @@ async function rag(question: string, namespace?: string) {
 
     for (const m of ranked.slice(0, maxDocs)) {
       const md = (m.metadata || {}) as Meta;
-      const chunk = clean(extractText(md));
+      const chunk = await clean(extractText(md));
       if (!chunk || chunk.length < 30) continue;
 
       if (used + chunk.length > maxContextChars && chunks.length >= 2) break;
@@ -509,7 +500,8 @@ Bun.serve({
           );
         }
 
-        const cleanQuery = clean(query);
+        const cleanQuery = await clean(query);
+        console.log("--- This is cleaned query ---",cleanQuery);
 
         // Optimized timeout with Promise.race
         const result = await Promise.race([
