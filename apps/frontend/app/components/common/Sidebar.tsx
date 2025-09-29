@@ -83,7 +83,7 @@ export function Sidebar() {
         className={cn(
           "fixed left-0 top-0 z-[50] h-screen bg-studio-bg border-r border-sidebar-border transition-all duration-300 ease-in-out flex flex-col",
           "md:relative md:z-auto",
-          isCollapsed ? "w-20" : "w-64",
+          isCollapsed ? "w-20" : "w-[240px]",
           isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         )}
         onMouseEnter={handleMouseEnter}
@@ -97,7 +97,13 @@ export function Sidebar() {
               variant="ghost"
               className="w-full p-2 hover:cursor-pointer hover:bg-sidebar-accent flex items-center justify-center"
             >
-              <Image src={ImageURL} alt="logo" className="rounded-2xl" width={40} height={40} />
+              <Image
+                src={ImageURL}
+                alt="logo"
+                className="rounded-2xl"
+                width={40}
+                height={40}
+              />
             </Button>
           ) : (
             <Button
@@ -112,31 +118,26 @@ export function Sidebar() {
 
         <div className="flex-1 py-4 space-y-3 mx-auto w-full">
           {navigationItems.map((item, index) => (
-            <Button
-              key={index}
-              onClick={item.onClick}
-              variant="ghost"
-              className={cn(
-                "w-full h-12 justify-start rounded-sm transition-colors flex items-center group mx-auto cursor-pointer text-sidebar-foreground hover:bg-sidebar-accent"
-              )}
-            >
-              <div
+            <div key={index} className="relative">
+              <Button
+                onClick={item.onClick}
+                variant="ghost"
                 className={cn(
-                  "w-10 h-10 flex flex-col items-center justify-center transition-colors"
+                  "group w-full h-12 relative overflow-visible rounded-none justify-start transition-colors flex items-center mx-auto cursor-pointer text-sidebar-foreground hover:bg-sidebar-accent"
                 )}
               >
-                <item.icon style={{ width: "60%", height: "60%" }} />
-                {isCollapsed && (
-                  <span className="text-[10px]">{item.label}</span>
+                <span className="absolute inset-y-0 left-0 w-1 z-10 pointer-events-none bg-[#3A475A] dark:bg-[#EFEFF7] opacity-0 transition-opacity duration-200 group-hover:opacity-100 rounded-br-3xl rounded-tr-3xl" />
+                <div className={cn("w-10 h-10 flex flex-col items-center justify-center transition-colors")}>
+                  <item.icon style={{ width: "60%", height: "60%" }} />
+                  {isCollapsed && <span className="text-[10px] dark:text-[#f4f4f4] text-stone-600">{item.label}</span>}
+                </div>
+                {!isCollapsed && (
+                  <span className="ml-3 text-sm flex-1 text-left font-medium dark:text-[#f4f4f4] text-stone-600">
+                    {item.label}
+                  </span>
                 )}
-              </div>
-
-              {!isCollapsed && (
-                <span className="ml-3 text-sm flex-1 text-left font-medium">
-                  {item.label}
-                </span>
-              )}
-            </Button>
+              </Button>
+            </div>
           ))}
         </div>
 

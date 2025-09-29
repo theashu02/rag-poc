@@ -29,6 +29,9 @@ const ALLOWED_FILE_TYPES = [
   "text/plain",
   "text/tab-separated-values",
   "application/pdf",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation", // .pptx
+  "application/msword", // .doc
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
 ];
 
 export function FileUploader() {

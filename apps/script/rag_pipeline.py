@@ -5,16 +5,17 @@ from typing import List, Dict
 from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor
 from tenacity import retry, stop_after_attempt, wait_exponential
+from pptx import Presentation
+from docx import Document
+import textract
 
 import spacy
 import yake
 import tiktoken
 from keybert import KeyBERT
-from sentence_transformers import CrossEncoder
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from openai import OpenAI
 from pinecone import Pinecone, ServerlessSpec
-import PyPDF2
 import pdfplumber
 import fitz
 import pytesseract
@@ -29,7 +30,6 @@ class RAGConfig:
     pinecone_api_key: str = os.getenv("PINECONE_API_KEY")
     index_name: str = os.getenv("PINECONE_INDEX")
     embedding_model: str = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-large")
-    reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-12-v2"
     keyword_model: str = "all-MiniLM-L6-v2"
     chunk_size: int = 500
     chunk_overlap: int = 100
@@ -48,7 +48,6 @@ _pc = None
 _nlp = None
 _kw_extractor = None
 _keybert_model = None
-_cross_encoder = None
 _encoding = None
 
 def get_openai_client():
@@ -92,12 +91,6 @@ def get_keybert_model():
     if _keybert_model is None:
         _keybert_model = KeyBERT(model=config.keyword_model)
     return _keybert_model
-
-def get_cross_encoder():
-    global _cross_encoder
-    if _cross_encoder is None:
-        _cross_encoder = CrossEncoder(config.reranker_model)
-    return _cross_encoder
 
 def get_tiktoken_encoding():
     global _encoding
@@ -165,6 +158,38 @@ def read_txt(path):
     try:
         with open(path, "r", encoding='utf-8', errors="ignore") as f:
             return normalize_text(f.read())
+    except Exception:
+        return None
+
+def read_json(path):
+    try:
+        with open(path, 'r', encoding='utf-8', errors="ignore") as f:
+            return normalize_text(f.read())
+    except Exception:
+        return None
+
+def read_pptx(path):
+    try:
+        prs = Presentation(path)
+        text = []
+        for slide in prs.slides:
+            for shape in slide.shapes:
+                if hasattr(shape, "text"):
+                    text.append(shape.text)
+        return "\n".join(text)
+    except Exception:
+        return None
+
+def read_docx(path):
+    try:
+        doc = Document(path)
+        return "\n".join([para.text for para in doc.paragraphs])
+    except Exception:
+        return None
+
+def read_doc(path):
+    try:
+        return textract.process(path).decode('utf-8', errors='ignore')
     except Exception:
         return None
 
