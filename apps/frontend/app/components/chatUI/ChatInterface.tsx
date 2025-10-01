@@ -90,7 +90,7 @@ export function ChatInterface() {
                 <AnimatedGreeting />
               </div>
 
-              <h2 className="text-4xl font-bold my-4">
+              <h2 className="text-4xl font-bold my-4 dark:text-[#f4f4f4] text-stone-600">
                 Welcome to Your Knowledge-Powered AI Assistant
               </h2>
               <p className="text-md text-muted-foreground mb-8 leading-relaxed">

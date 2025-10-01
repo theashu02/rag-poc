@@ -2,7 +2,6 @@
 
 import { Storage, type File } from '@google-cloud/storage';
 import { z } from 'zod';
-import path from 'path';
 
 const gcsProjectId = process.env.GCS_PROJECT_ID;
 const gcsClientEmail = process.env.GCS_CLIENT_EMAIL;
@@ -45,35 +44,10 @@ const ALLOWED_FILE_TYPES = [
   'text/plain',
   'text/tab-separated-values',
   'application/pdf',
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation", // .pptx
+  "application/msword", // .doc
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
 ];
-
-// const getNextFileName = async (originalFileName: string, userId: string) => {
-//   try {
-
-//     const prefix = `Data/${userId}/`;
-//     const [files] = await bucket.getFiles({ 
-//       prefix,
-//       maxResults: 1000 // Add limit to avoid timeout on large buckets
-//     });
-    
-//     const fileNumbers = files
-//       .map((file: any) => {
-//         const match = file.name.match(new RegExp(`^${prefix}file(\\d+)\\..+$`));
-//         return match ? parseInt(match[1], 10) : 0;
-//       })
-//       .filter((num: number) => num > 0);
-
-//     const nextFileNumber = fileNumbers.length > 0 ? Math.max(...fileNumbers) + 1 : 1;
-//     const extension = path.extname(originalFileName);
-//     return `file${nextFileNumber}${extension}`;
-//   } catch (error) {
-//     console.error('Error getting next file name:', error);
-//     // Fallback to timestamp-based naming
-//     const timestamp = Date.now();
-//     const extension = path.extname(originalFileName);
-//     return `file_${timestamp}${extension}`;
-//   }
-// };
 
 const actionSchema = z.object({
   name: z.string().min(1),
@@ -224,5 +198,32 @@ export async function deleteUserFile(userId: string, fileName: string) {
       return { failure: 'File not found. It may have already been deleted.' };
     }
     return { failure: 'Could not delete the file. Please try again later.' };
+  }
+}
+
+export async function downloadUserFile(userId: string, fileName: string){
+  if (!userId) {
+    return { failure: 'User not autheticated.' };
+  }
+  if (!fileName) {
+    return { failure: 'File name not provided.' };
+  }
+  try {
+    const filePath = `Data/${userId}/${fileName}`;
+    const options = {
+      version: 'v4' as const,
+      action: 'read' as const,
+      expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+      responseDisposition: `attachment; filename="${fileName}"`,
+    }
+
+    const [url] = await bucket.file(filePath).getSignedUrl(options);
+    return { success: {url} };
+  } catch (error: any) {
+    console.log(`Error to dowm=nload the file ${userId}: `, error);
+    if(error.code === 404) {
+      return { failure: 'File not found, It may have not in the bucket.' };
+    }
+    return { failure: 'Could not able to download the file. Please try again later.' };
   }
 }

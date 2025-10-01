@@ -37,7 +37,7 @@ PY
 ENV HF_HUB_OFFLINE=1
 
 COPY main.py .
-COPY rag_pipeline.py .
+COPY services/ ./services/
 
 EXPOSE 8080
 CMD ["functions-framework", "--target=handle_gcs_event", "--port=8080"]
