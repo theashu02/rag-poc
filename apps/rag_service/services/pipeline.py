@@ -4,7 +4,7 @@ from typing import Dict, List
 
 from .chunker import chunker
 from .document_readers import (
-    read_pdf, read_txt, read_json, read_pptx, read_docx, read_doc
+    read_pdf, read_txt, read_json, read_pptx, read_docx
 )
 from .text_processor import processor
 from .uploader import upload_to_pinecone
@@ -18,7 +18,6 @@ def _read_by_extension(path: str, filename: str):
     elif ext == ".json": return read_json(path)
     elif ext == ".pptx": return read_pptx(path)
     elif ext == ".docx": return read_docx(path)
-    elif ext == ".doc":  return read_doc(path)
     return None
 
 

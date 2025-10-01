@@ -1,12 +1,12 @@
 from __future__ import annotations
-import io, os, pdfplumber, fitz, pytesseract, textract
+import io, os, pdfplumber, fitz, pytesseract
 from typing import Dict, Optional
 
 from PIL import Image
 from pptx import Presentation
 from docx import Document
 
-# from .text_utils import normalize_text    # local helper at bottom
+from .text_normalizer import normalize_json, format_blocks, normalize_text
 
 
 def read_pdf(path: str) -> Optional[str]:
@@ -78,30 +78,30 @@ def read_txt(path: str) -> Optional[str]:
 def read_json(path: str) -> Optional[str]:
     try:
         with open(path, "r", encoding="utf-8", errors="ignore") as f:
-            return normalize_text(f.read())
+            cleaned_json = normalize_json(f.read())
+            return format_blocks(cleaned_json, show_list_index=False)
+    except Exception:
+        return None
+
+def read_pptx(path: str) -> Optional[str]:
+    try:
+        prs = Presentation(path)
+        text = []
+        for slide in prs.slides:
+            for shape in slide.shapes:
+                if hasattr(shape, "text"):
+                    text.append(shape.text)
+        return "\n".join(text)
     except Exception:
         return None
 
 
-# def read_pptx(path: str) -> Optional[str]:
-#     try:
-#         prs = Presentation(path)
-#         text = []
-#         for slide in prs.slides:
-#             for shape in slide.shapes:
-#                 if hasattr(shape, "text"):
-#                     text.append(shape.text)
-#         return "\n".join(text)
-#     except Exception:
-#         return None
-
-
-# def read_docx(path: str) -> Optional[str]:
-#     try:
-#         doc = Document(path)
-#         return "\n".join([para.text for para in doc.paragraphs])
-#     except Exception:
-#         return None
+def read_docx(path: str) -> Optional[str]:
+    try:
+        doc = Document(path)
+        return "\n".join([para.text for para in doc.paragraphs])
+    except Exception:
+        return None
 
 
 # def read_doc(path: str) -> Optional[str]:
@@ -111,7 +111,7 @@ def read_json(path: str) -> Optional[str]:
 #         return None
 
 
-# ---------- helpers -------------------------------------------------------- #
+# ---------- helpers --------- #
 
 def normalize_text(s: str) -> str:
     s = s.replace("\r\n", "\n").replace("\r", "\n")
