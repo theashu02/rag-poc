@@ -1,0 +1,44 @@
+# Core RAG script dependencies
+pandas
+numpy
+nltk
+scikit-learn
+python-dotenv
+
+# System dependencies
+pysqlite3-binary
+transformers>=4.40.0
+torch>=2.2.0
+
+#utilities
+python-dotenv
+aiohttp
+langchain
+
+# ------------- Google Cloud Functions runtime --------------------
+functions-framework
+google-cloud-storage
+
+# ------------- Vector-DB + LLM stack -----------------------------
+openai>=1.10.0
+pinecone>=3.0.0
+tenacity>=8.2.2
+
+# ------------- NLP + Text processing -----------------------------
+spacy==3.7.2
+tiktoken>=0.6.0
+yake>=0.4.8
+keybert>=0.7.0
+sentence-transformers>=0.6.1
+langchain-text-splitters>=0.0.1
+
+# ------------- Document parsing ----------------------------------
+pdfplumber>=0.9.0
+pymupdf>=1.23.19
+pytesseract>=0.3.10                 
+pillow>=10.0.0                     
+python-docx>=0.8.11                  
+python-pptx>=0.6.23                 
+# textract==1.6.5                    
+
+# ------------- Misc utilities ------------------------------------

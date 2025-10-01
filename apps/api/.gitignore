@@ -1,6 +1,7 @@
 # dependencies (bun install)
 node_modules
-
+Data
+Queries.json
 # output
 out
 dist

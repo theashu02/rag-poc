@@ -7,10 +7,11 @@ import { ThemeProvider } from "@/components/ThemeFiles/theme-provider"
 import SessionWrapping from "@/lib/Auth/sessionWrapping"
 import { Toaster } from "@/components/ui/sonner"
 import InitUser from "@/app/components/common/InitUser"
+import Loading from "@/app/components/common/Loading"
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<Loading />}>
       <ReduxProvider store={store}>                          
         <SessionWrapping>
           <ThemeProvider

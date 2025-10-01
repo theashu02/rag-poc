@@ -15,6 +15,10 @@ pinecone
 python-dotenv
 PyPDF2
 pdfplumber
+pymupdf
+pytesseract
+Pillow
+python-docx
 
 # Google Cloud dependencies
 google-cloud-storage

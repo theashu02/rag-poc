@@ -5,23 +5,17 @@ from typing import List, Dict
 from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor
 from tenacity import retry, stop_after_attempt, wait_exponential
-from pptx import Presentation
-from docx import Document
-import textract
 
 import spacy
 import yake
 import tiktoken
 from keybert import KeyBERT
+from sentence_transformers import CrossEncoder
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from openai import OpenAI
 from pinecone import Pinecone, ServerlessSpec
+import PyPDF2
 import pdfplumber
-import fitz
-import pytesseract
-from PIL import Image
-import io
-
 
 # --- Configuration ---
 @dataclass
@@ -30,6 +24,7 @@ class RAGConfig:
     pinecone_api_key: str = os.getenv("PINECONE_API_KEY")
     index_name: str = os.getenv("PINECONE_INDEX")
     embedding_model: str = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-large")
+    reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-12-v2"
     keyword_model: str = "all-MiniLM-L6-v2"
     chunk_size: int = 500
     chunk_overlap: int = 100
@@ -48,6 +43,7 @@ _pc = None
 _nlp = None
 _kw_extractor = None
 _keybert_model = None
+_cross_encoder = None
 _encoding = None
 
 def get_openai_client():
@@ -61,7 +57,7 @@ def get_pinecone_index():
     if _pc is None:
         _pc = Pinecone(api_key=config.pinecone_api_key)
         
-    dimension = 1536  # for text-embedding-3-small
+    dimension = 3072  # for text-embedding-3-small
     if config.index_name not in _pc.list_indexes().names():
         print(f"Creating index {config.index_name}...")
         _pc.create_index(
@@ -92,6 +88,12 @@ def get_keybert_model():
         _keybert_model = KeyBERT(model=config.keyword_model)
     return _keybert_model
 
+def get_cross_encoder():
+    global _cross_encoder
+    if _cross_encoder is None:
+        _cross_encoder = CrossEncoder(config.reranker_model)
+    return _cross_encoder
+
 def get_tiktoken_encoding():
     global _encoding
     if _encoding is None:
@@ -103,93 +105,29 @@ os.makedirs(config.cache_dir, exist_ok=True)
 
 # --- Document Readers ---
 def read_pdf(path):
-    text_by_page: Dict[int, str] = {}
-    images_for_ocr = []
-    try:
-        doc = fitz.open(path)
-        for idx, page in enumerate(doc):
-            page_num = idx + 1
-            txt = page.get_text().strip()
-            text_by_page[page_num] = txt
-
-            if len(txt) < 50:
-                for img in page.get_images():
-                    pix = fitz.Pixmap(doc, img[0])
-                    if pix.n - pix.alpha < 4:
-                        images_for_ocr.append(
-                            {"page": page_num, "data": pix.tobytes("png")}
-                        )
-        doc.close()
-    except Exception as exc:                          
-        print(f"PyMuPDF extraction failed: {exc}")
-
-    for img in images_for_ocr:
-        try:
-            pil_img = Image.open(io.BytesIO(img["data"]))
-            ocr_txt = pytesseract.image_to_string(
-                pil_img, config="--oem 3 --psm 6"
-            ).strip()
-            if ocr_txt:
-                merged = f"{text_by_page.get(img['page'], '')}\n{ocr_txt}".strip()
-                text_by_page[img["page"]] = merged
-        except Exception as exc:                    
-            print(f"OCR failed (page {img['page']}): {exc}")
-
+    text = ""
     try:
         with pdfplumber.open(path) as pdf:
-            for idx, page in enumerate(pdf.pages):
-                page_num = idx + 1
-                extra = (page.extract_text() or "").strip()
-                if extra and extra not in text_by_page.get(page_num, ""):
-                    text_by_page[page_num] = (
-                        f"{text_by_page.get(page_num, '')}\n{extra}".strip()
-                    )
-    except Exception as exc:
-        print(f"pdfplumber extraction failed: {exc}")
-
-    if text_by_page:
-        full = "\n".join(
-            text_by_page[p] for p in sorted(text_by_page) if text_by_page[p]
-        )
-        return normalize_text(full) if full else None
-    return None
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
+    except Exception:
+        try:
+            with open(path, 'rb') as file:
+                pdf_reader = PyPDF2.PdfReader(file)
+                for page in pdf_reader.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
+        except Exception:
+            return None
+    return normalize_text(text) if text else None
 
 def read_txt(path):
     try:
         with open(path, "r", encoding='utf-8', errors="ignore") as f:
             return normalize_text(f.read())
-    except Exception:
-        return None
-
-def read_json(path):
-    try:
-        with open(path, 'r', encoding='utf-8', errors="ignore") as f:
-            return normalize_text(f.read())
-    except Exception:
-        return None
-
-def read_pptx(path):
-    try:
-        prs = Presentation(path)
-        text = []
-        for slide in prs.slides:
-            for shape in slide.shapes:
-                if hasattr(shape, "text"):
-                    text.append(shape.text)
-        return "\n".join(text)
-    except Exception:
-        return None
-
-def read_docx(path):
-    try:
-        doc = Document(path)
-        return "\n".join([para.text for para in doc.paragraphs])
-    except Exception:
-        return None
-
-def read_doc(path):
-    try:
-        return textract.process(path).decode('utf-8', errors='ignore')
     except Exception:
         return None
 
