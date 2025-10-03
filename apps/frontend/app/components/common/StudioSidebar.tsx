@@ -46,15 +46,6 @@ export function StudioSidebar({ isCollapsed = false, onToggle }: StudioSidebarPr
       {isCollapsed && (
         <ScrollArea className="flex-1 overflow-y-auto">
           <div className="absolute bottom-0 flex flex-col items-center p-4 space-y-4">
-            {/* <Button variant="ghost" size="sm" className="text-studio-text hover:bg-studio-card-hover">
-              <AudioWaveform size={20} />
-            </Button>
-            <Button variant="ghost" size="sm" className="text-studio-text hover:bg-studio-card-hover">
-              <Video size={20} />
-            </Button>
-            <Button variant="ghost" size="sm" className="text-studio-text hover:bg-studio-card-hover">
-              <GitBranch size={20} />
-            </Button> */}
             <Button onClick={handleAllDocs} variant="ghost" size="sm" className="text-studio-text hover:bg-studio-card-hover">
               <FileText size={20} />
             </Button>

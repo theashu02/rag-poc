@@ -62,11 +62,18 @@ export const DocListTopFive = memo(function DocListTopFive() {
     shallowEqual
   )
 
+  // useEffect(() => {
+  //   if (userId) {
+  //     dispatch(fetchUserFiles(userId) as any) // this render the list on evey mount
+  //   }
+  // }, [dispatch, userId])
+
   useEffect(() => {
-    if (userId) {
+    // fetch only once per session
+    if (userId && files.length === 0 && !isLoading) {
       dispatch(fetchUserFiles(userId) as any)
     }
-  }, [dispatch, userId])
+  }, [dispatch, userId, files.length, isLoading])
 
   const latestFiles = useMemo(() => {
     return [...files]

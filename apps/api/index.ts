@@ -7,6 +7,7 @@ import bm25PrepTasks from "./services/BM25_config";
 import { corsHeaders } from "./services/config";
 import { pinecone } from "./services/pinecone";
 import { openai } from "./services/openai";
+import { generateAnswerOpenRouter, streamAnswer } from "./services/ThirdPartyOpenAI";
 import bm25Search from "wink-bm25-text-search";
 import { createHash } from "crypto";
 
@@ -238,40 +239,75 @@ async function retrieve(
   throw lastError || new Error("All retrieve attempts failed");
 }
 
-async function generateAnswer(question: string, context: string): Promise<string> {
-  const queuedTask = async (): Promise<string> => {
-    try {
-      const completion = await openai.chat.completions.create({
-        model: OPENAI_CHAT_MODEL,
-        temperature: 0.2,
-        max_tokens: 600,
-        messages: [
-          {
-            role: "system",
-            content: PromptForGenerateAnswer,
-          },
-          {
-            role: "user",
-            content: `Context information: ${context}
-            Question: ${question}
-            Provide a helpful answer based on the context above:`,
-          },
-        ],
-      });
+async function retrieveContext(
+  question: string,
+  namespace?: string
+): Promise<{
+  context: string;
+  sources: Array<{ id: string; source?: string; score: number }>;
+}> {
+  const topK = 25;
+  const maxContextChars = 5000;
+  const maxDocs = 4;
 
-      return (
-        completion.choices?.[0]?.message?.content?.trim() ??
-        "I apologize, but I couldn't generate a response. Please try rephrasing your question."
-      );
-    } catch (error) {
-      console.error("Answer generation error:", error);
-      throw error;
-    }
-  };
+  const denseMatches = await retrieve(question, topK, namespace);
 
-  // Type assertion to ensure the result is always a string
-  const result = (await chatQueue.add(queuedTask)) as string;
-  return result;
+  if (!denseMatches.length) {
+    return { context: "", sources: [] };
+  }
+
+  const docs = denseMatches
+    .map((m) => ({
+      id: String(m.id),
+      text: extractText(m.metadata || {}),
+    }))
+    .filter((d) => d.text.length > 10);
+
+  const bm25Scores = bm25Rerank(question, docs, namespace);
+
+  const denseScoreMap = new Map<string, number>();
+  for (const m of denseMatches) {
+    denseScoreMap.set(String(m.id), m.score ?? 0);
+  }
+
+  const blended = blendScores(denseScoreMap, bm25Scores, 0.65);
+
+  const byId = new Map(denseMatches.map((m) => [String(m.id), m]));
+  const ranked = [...blended.entries()]
+    .map(([id, score]) => {
+      const m = byId.get(id)!;
+      return { ...m, score, id };
+    })
+    .filter((m) => {
+      const text = extractText(m.metadata || {});
+      return text.length > 20;
+    })
+    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+
+  const chunks: string[] = [];
+  const sources: Array<{ id: string; source?: string; score: number }> = [];
+  let used = 0;
+
+  for (const m of ranked.slice(0, maxDocs)) {
+    const md = (m.metadata || {}) as Meta;
+    const chunk = await clean(extractText(md));
+    if (!chunk || chunk.length < 30) continue;
+
+    if (used + chunk.length > maxContextChars && chunks.length >= 2) break;
+
+    chunks.push(chunk);
+    sources.push({
+      id: String(m.id),
+      score: Number(m.score ?? 0),
+      source:
+        (md.source as string) || (md.url as string) || md.file || "unknown",
+    });
+    used += chunk.length;
+
+    if (used >= maxContextChars) break;
+  }
+
+  return { context: chunks.join("\n\n---\n\n"), sources };
 }
 
 // Main RAG function with comprehensive optimization
@@ -385,7 +421,8 @@ async function rag(question: string, namespace?: string) {
     }
 
     const context = chunks.join("\n\n---\n\n");
-    const answer = await generateAnswer(question, context);
+    const answer = await generateAnswerOpenRouter(question, context);
+    // const answer = await generateAnswer(question, context);
 
     const result = {
       answer:
@@ -410,6 +447,56 @@ async function rag(question: string, namespace?: string) {
     return errorResult;
   }
 }
+
+// streming rag
+async function ragStreaming(
+  question: string,
+  namespace: string | undefined,
+  onToken: (token: string) => void,
+  onSources: (sources: Array<{ id: string; source?: string; score: number }>) => void
+): Promise<string> {
+  // Quick responses for greetings/small talk
+  if (isGreeting(question)) {
+    const response = generateGreetingResponse(question);
+    onToken(response);
+    onSources([]);
+    return response;
+  }
+
+  if (isSmallTalk(question)) {
+    const response = generateSmallTalkResponse(question);
+    onToken(response);
+    onSources([]);
+    return response;
+  }
+
+  try {
+    const { context, sources } = await retrieveContext(question, namespace);
+
+    // Send sources first
+    onSources(sources);
+
+    if (!context) {
+      const fallback = "I couldn't find relevant information to answer your question from the current knowledge base.";
+      onToken(fallback);
+      return fallback;
+    }
+
+    // Stream the answer
+    return await streamAnswer(question, context, {
+      onToken,
+      onError: (error) => {
+        console.error("Streaming error:", error);
+      },
+    });
+  } catch (error) {
+    console.error("Error in streaming RAG:", error);
+    const errorMsg = "I encountered an error while processing your request.";
+    onToken(errorMsg);
+    return errorMsg;
+  }
+}
+
 
 // Enhanced server with better error handling and monitoring
 Bun.serve({
@@ -550,6 +637,107 @@ Bun.serve({
         );
       }
     }
+
+    // for the streaming
+    if (url.pathname === "/api/v1/query/stream" && req.method === "POST") {
+      try {
+        const body = (await req.json()) as {
+          query?: string;
+          namespace?: string;
+        };
+        const { query, namespace } = body ?? {};
+
+        if (!query || typeof query !== "string" || query.length < 3) {
+          return new Response(
+            JSON.stringify({ message: "Invalid query parameter" }),
+            {
+              headers: { "Content-Type": "application/json", ...corsHeaders },
+              status: 400,
+            }
+          );
+        }
+
+        const cleanQuery = await clean(query);
+
+        const stream = new ReadableStream({
+          async start(controller) {
+            const encoder = new TextEncoder();
+
+            try {
+              // Send initial event
+              // controller.enqueue(
+              //   encoder.encode(
+              //     `data: ${JSON.stringify({ type: "start" })}\n\n`
+              //   )
+              // );
+
+              let sourceSent = false;
+
+              await ragStreaming(
+                cleanQuery,
+                namespace,
+                (token) => {
+                  // Stream each token
+                  controller.enqueue(
+                    encoder.encode(token)
+                    // `data: ${JSON.stringify({ type: "token", content: token })}\n\n`
+                  );
+                },
+                (sources) => {
+                  // Send sources once
+                  if (!sourceSent) {
+                    controller.enqueue(
+                      encoder.encode(
+                        // `data: ${({ type: "sources", sources })}\n\n`
+                      )
+                    );
+                    sourceSent = true;
+                  }
+                }
+              );
+
+              // Send completion event
+              // controller.enqueue(
+              //   encoder.encode(
+              //     `data: ${JSON.stringify({ type: "done" })}\n\n`
+              //   )
+              // );
+            } catch (error) {
+              controller.enqueue(
+                encoder.encode(
+                  `data: ${JSON.stringify({ type: "error", message: error instanceof Error ? error.message : "Unknown error" })}\n\n`
+                )
+              );
+            } finally {
+              controller.close();
+            }
+          },
+        });
+
+        return new Response(stream, {
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache, no-transform",
+            Connection: "keep-alive",
+            "X-Accel-Buffering": "no",
+            ...corsHeaders,
+          },
+        });
+      } catch (err) {
+        console.error("Streaming error:", err);
+        return new Response(
+          JSON.stringify({
+            message: "Streaming failed",
+            error: err instanceof Error ? err.message : "Unknown error",
+          }),
+          {
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+            status: 500,
+          }
+        );
+      }
+    }
+
 
     // Cache management endpoint (optional)
     if (url.pathname === "/api/v1/cache" && req.method === "DELETE") {

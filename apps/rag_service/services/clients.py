@@ -1,19 +1,37 @@
 import time
-from typing import Optional, Any
+from functools import lru_cache
+from typing import Optional, Any, Dict
 
 from openai import OpenAI
 from pinecone import Pinecone, ServerlessSpec
-import spacy, yake, tiktoken
+import spacy
+import yake
+import tiktoken
 from keybert import KeyBERT
 
 from .config import config
 
-_client:          Optional[OpenAI]     = None
-_pc:              Optional[Pinecone]   = None
-_nlp:             Optional[Any]        = None
-_kw_extractor:    Optional[yake.KeywordExtractor] = None
-_keybert_model:   Optional[KeyBERT]    = None
-_encoding:        Optional[tiktoken.Encoding]     = None
+_client: Optional[OpenAI] = None
+_pc: Optional[Pinecone] = None
+_nlp: Optional[Any] = None
+_kw_extractor: Optional[yake.KeywordExtractor] = None
+_keybert_model: Optional[KeyBERT] = None
+_encoding: Optional[tiktoken.Encoding] = None
+
+_MODEL_DIMENSIONS: Dict[str, int] = {
+    "text-embedding-3-small": 1536,
+    "text-embedding-3-large": 3072,
+    "text-embedding-3-large-v1": 3072,
+    "text-embedding-ada-002": 1536,
+}
+
+
+def _resolve_embedding_dimension() -> int:
+    if config.embedding_dimension:
+        return config.embedding_dimension
+    if config.embedding_model in _MODEL_DIMENSIONS:
+        return _MODEL_DIMENSIONS[config.embedding_model]
+    return 1536
 
 
 def get_openai_client() -> OpenAI:
@@ -25,27 +43,40 @@ def get_openai_client() -> OpenAI:
 
 def get_pinecone_index():
     global _pc
-    if _pc is None: _pc = Pinecone(api_key=config.pinecone_api_key)
+    if _pc is None:
+        _pc = Pinecone(api_key=config.pinecone_api_key)
 
-    dim = 1536            # for text-embedding-3-small/large 3072
-    if config.index_name not in _pc.list_indexes().names():
-        print(f"[Pinecone] creating index '{config.index_name}' …")
+    dimension = _resolve_embedding_dimension()
+    existing = {idx.name for idx in _pc.list_indexes()}
+    if config.index_name not in existing:
+        print(f"[Pinecone] creating index '{config.index_name}' with dim {dimension}.")
         _pc.create_index(
             name=config.index_name,
-            dimension=dim,
+            dimension=dimension,
             metric="cosine",
-            spec=ServerlessSpec(cloud="aws", region="us-east-1")
+            spec=ServerlessSpec(cloud=config.pinecone_cloud, region=config.pinecone_region),
         )
-        while not _pc.describe_index(config.index_name).status['ready']:
+        while True:
+            status = _pc.describe_index(config.index_name).status
+            if status.get("ready"):
+                break
             time.sleep(1)
 
     return _pc.Index(config.index_name)
 
 
+@lru_cache(maxsize=1)
+def _load_spacy_model() -> Any:
+    try:
+        return spacy.load("en_core_web_lg")
+    except OSError:
+        return spacy.load("en_core_web_sm")
+
+
 def get_spacy_nlp():
     global _nlp
     if _nlp is None:
-        _nlp = spacy.load("en_core_web_lg")
+        _nlp = _load_spacy_model()
     return _nlp
 
 
@@ -63,8 +94,21 @@ def get_keybert_model():
     return _keybert_model
 
 
-def get_tiktoken_encoding():
+def get_tiktoken_encoding() -> tiktoken.Encoding:
     global _encoding
     if _encoding is None:
-        _encoding = tiktoken.encoding_for_model("gpt-4o")
+        try:
+            _encoding = tiktoken.encoding_for_model(config.tokenizer_model)
+        except KeyError:
+            _encoding = tiktoken.get_encoding("cl100k_base")
     return _encoding
+
+
+__all__ = [
+    "get_openai_client",
+    "get_pinecone_index",
+    "get_spacy_nlp",
+    "get_yake_extractor",
+    "get_keybert_model",
+    "get_tiktoken_encoding",
+]

@@ -1,8 +1,20 @@
+import PQueue from "p-queue";
+
+
+export const chatQueue = new PQueue({
+  concurrency: 5,
+  interval: 1000,
+  intervalCap: 20,
+});
+
+
 export const PORT = Number(process.env.PORT) || 5000;
 export const PINECONE_INDEX = process.env.PINECONE_INDEX;
 export const OPENAI_EMBEDDING_MODEL = process.env.OPENAI_EMBEDDING_MODEL || "text-embedding-3-small";
 export const EMBEDDING_DIM = Number(process.env.DIMENSIONS) || 3072;
 export const OPENAI_CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini";
+export const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+export const OPENROUTER_BASE_URL = process.env.OPENROUTER_BASE_URL;
 
 // cors configration
 export const corsHeaders = {
