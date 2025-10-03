@@ -65,7 +65,7 @@ export function MessageBubble({ message, responseContent }: MessageBubbleProps) 
         <div className="relative">
           <div
             className={cn(
-              "inline-block rounded-2xl px-5 py-4 text-[15px] leading-relaxed shadow-sm transition-all duration-200 hover:shadow-md",
+              "inline-block rounded-2xl px-5 py-4 text-[13px] leading-relaxed shadow-sm transition-all duration-200 hover:shadow-md",
               isUser
                 ? "bg-stone-900 border-2 text-amber-100 ml-auto"
                 : "bg-card text-card-foreground border border-border backdrop-blur-sm"

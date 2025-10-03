@@ -1,12 +1,14 @@
 import PQueue from "p-queue";
+import { LRUCache } from "lru-cache";
+import type { ScoredPineconeRecord } from "@pinecone-database/pinecone";
 
+export type Meta = Record<string, any>;
+export type Match = ScoredPineconeRecord<Meta>;
 
-export const chatQueue = new PQueue({
-  concurrency: 5,
-  interval: 1000,
-  intervalCap: 20,
-});
-
+export const EMBEDDING_CACHE = new LRUCache<string, number[]>({ max: 10000, ttl: 1000 * 60 * 60 * 2 });
+export const chatQueue = new PQueue({ concurrency: 5, interval: 1000, intervalCap: 20 });
+export const embeddingQueue = new PQueue({ concurrency: 10, interval: 1000, intervalCap: 50 });
+export const BM25_INSTANCES_CACHE = new LRUCache<string, any>({ max: 100, ttl: 1000 * 60 * 60 });
 
 export const PORT = Number(process.env.PORT) || 5000;
 export const PINECONE_INDEX = process.env.PINECONE_INDEX;
@@ -33,3 +35,25 @@ export const PromptForGenerateAnswer = `You are a helpful and precise assistant.
               7. Does not specifically mention what is there in the context and what is not just prepare the answer and reply based on the context.`;
 
 
+export function normalizeMap(scores: Map<string, number>): Map<string, number> {
+  const vals = [...scores.values()];
+  if (vals.length === 0) return scores;
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  if (max === min) {
+    const mid = 0.5;
+    return new Map([...scores.keys()].map((k) => [k, mid]));
+  }
+  return new Map(
+    [...scores.entries()].map(([k, v]) => [k, (v - min) / (max - min)])
+  );
+}
+
+export function extractText(md: Meta): string {
+  return (
+    (md?.text as string) ??
+    (md?.content as string) ??
+    (md?.chunk as string) ??
+    ""
+  );
+}

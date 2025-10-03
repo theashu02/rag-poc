@@ -2,7 +2,10 @@ import OpenAI from "openai";
 import { OPENAI_CHAT_MODEL, PromptForGenerateAnswer, OPENROUTER_API_KEY, OPENROUTER_BASE_URL, chatQueue } from "./config";
 
 if (!OPENROUTER_BASE_URL || !OPENROUTER_API_KEY) {
-  throw new Error("Missing env: OPENROUTER_BASE_URL or OPENROUTER_API_KEY");
+  console.error("---- Missing env: OPENROUTER_BASE_URL or OPENROUTER_API_KEY ----");
+  throw new Error("---- Missing env: OPENROUTER_BASE_URL or OPENROUTER_API_KEY ----");
+} else {
+  console.log("---- OPENROUTER_BASE_URL and OPENROUTER_API_KEY is present ----");
 }
 
 export const openRouterAI = new OpenAI({
