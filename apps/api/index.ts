@@ -3,7 +3,6 @@ import { PORT } from "./services/config";
 import { clean } from "./services/cleanQuery"
 import { corsHeaders } from "./services/config";
 import { EMBEDDING_CACHE, BM25_INSTANCES_CACHE, embeddingQueue, chatQueue } from "./services/config";
-import { ragStreaming } from "./services/ragStreamingFreeTire";
 import { rag } from "./services/rag";
 import { SEMANTIC_CACHE } from "./services/cache";
 
@@ -147,107 +146,6 @@ Bun.serve({
       }
     }
 
-    // for the streaming
-    if (url.pathname === "/api/v1/query/stream" && req.method === "POST") {
-      try {
-        const body = (await req.json()) as {
-          query?: string;
-          namespace?: string;
-        };
-        const { query, namespace } = body ?? {};
-
-        if (!query || typeof query !== "string" || query.length < 3) {
-          return new Response(
-            JSON.stringify({ message: "Invalid query parameter" }),
-            {
-              headers: { "Content-Type": "application/json", ...corsHeaders },
-              status: 400,
-            }
-          );
-        }
-
-        const cleanQuery = await clean(query);
-
-        const stream = new ReadableStream({
-          async start(controller) {
-            const encoder = new TextEncoder();
-
-            try {
-              // Send initial event
-              // controller.enqueue(
-              //   encoder.encode(
-              //     `data: ${JSON.stringify({ type: "start" })}\n\n`
-              //   )
-              // );
-
-              let sourceSent = false;
-
-              await ragStreaming(
-                cleanQuery,
-                namespace,
-                (token) => {
-                  // Stream each token
-                  controller.enqueue(
-                    encoder.encode(token)
-                    // `data: ${JSON.stringify({ type: "token", content: token })}\n\n`
-                  );
-                },
-                (sources) => {
-                  // Send sources once
-                  if (!sourceSent) {
-                    controller.enqueue(
-                      encoder.encode(
-                        // `data: ${({ type: "sources", sources })}\n\n`
-                      )
-                    );
-                    sourceSent = true;
-                  }
-                }
-              );
-
-              // Send completion event
-              // controller.enqueue(
-              //   encoder.encode(
-              //     `data: ${JSON.stringify({ type: "done" })}\n\n`
-              //   )
-              // );
-            } catch (error) {
-              controller.enqueue(
-                encoder.encode(
-                  `data: ${JSON.stringify({ type: "error", message: error instanceof Error ? error.message : "Unknown error" })}\n\n`
-                )
-              );
-            } finally {
-              controller.close();
-            }
-          },
-        });
-
-        return new Response(stream, {
-          headers: {
-            "Content-Type": "text/event-stream",
-            "Cache-Control": "no-cache, no-transform",
-            Connection: "keep-alive",
-            "X-Accel-Buffering": "no",
-            ...corsHeaders,
-          },
-        });
-      } catch (err) {
-        console.error("Streaming error:", err);
-        return new Response(
-          JSON.stringify({
-            message: "Streaming failed",
-            error: err instanceof Error ? err.message : "Unknown error",
-          }),
-          {
-            headers: { "Content-Type": "application/json", ...corsHeaders },
-            status: 500,
-          }
-        );
-      }
-    }
-
-
     // Cache management endpoint (optional)
     if (url.pathname === "/api/v1/cache" && req.method === "DELETE") {
       EMBEDDING_CACHE.clear();
@@ -275,3 +173,4 @@ console.log(
   `✅ Caching enabled: Embedding(${EMBEDDING_CACHE.max}), Semantic(${SEMANTIC_CACHE.max}), BM25(${BM25_INSTANCES_CACHE.max})`
 );
 console.log(`⚡ Rate limiting: Embeddings(50/s), Chat(20/s)`);
+

@@ -7,6 +7,7 @@ import { User, Copy, Check, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
+import { ThinkingIndicator } from "../common/ThinkingBar"
 
 interface MessageBubbleProps {
   message: Message
@@ -81,24 +82,8 @@ export function MessageBubble({ message, responseContent }: MessageBubbleProps) 
               <div className="whitespace-pre-wrap break-words">
                 {message.content ||
                   (isTyping ? (
-                    <div className="flex items-center gap-3">
-                      <div className="flex gap-1">
-                        <div
-                          className="w-2 h-2 bg-primary/60 rounded-full animate-bounce"
-                          style={{ animationDelay: "0ms" }}
-                        />
-                        <div
-                          className="w-2 h-2 bg-primary/60 rounded-full animate-bounce"
-                          style={{ animationDelay: "150ms" }}
-                        />
-                        <div
-                          className="w-2 h-2 bg-primary/60 rounded-full animate-bounce"
-                          style={{ animationDelay: "300ms" }}
-                        />
-                      </div>
-                      <span className="text-muted-foreground text-sm font-medium">
-                        Thinking...
-                      </span>
+                    <div className="flex items-center">
+                      <ThinkingIndicator durationMs={1600} />
                     </div>
                   ) : (
                     ""

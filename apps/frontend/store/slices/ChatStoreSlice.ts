@@ -56,7 +56,7 @@ export const sendMessage = createAsyncThunk<
 
     try {
       if (!userID) return rejectWithValue("User not authenticated");
-      const res = await api.post("/api/v1/query/stream", { query: content, namespace: userID });
+      const res = await api.post("/api/v1/query", { query: content, namespace: userID });
       const payload = res?.data;
       const answer =
         payload?.answer ??
