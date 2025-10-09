@@ -6,12 +6,13 @@ export type Meta = Record<string, any>;
 export type Match = ScoredPineconeRecord<Meta>;
 
 export const EMBEDDING_CACHE = new LRUCache<string, number[]>({ max: 10000, ttl: 1000 * 60 * 60 * 2 });
-export const chatQueue = new PQueue({ concurrency: 5, interval: 1000, intervalCap: 20 });
-export const embeddingQueue = new PQueue({ concurrency: 10, interval: 1000, intervalCap: 50 });
+export const chatQueue = new PQueue({ concurrency: 10 });
+export const embeddingQueue = new PQueue({ concurrency: 25 });
 export const BM25_INSTANCES_CACHE = new LRUCache<string, any>({ max: 100, ttl: 1000 * 60 * 60 });
+export const RETRIEVAL_CACHE = new LRUCache<string, Match[]>({ max: 5_000, ttl: 1000 * 60 * 10 });
 
 export const PORT = Number(process.env.PORT) || 5000;
-export const PINECONE_INDEX = process.env.PINECONE_INDEX;
+export const PINECONE_INDEX = process.env.PINECONE_INDEX
 export const OPENAI_EMBEDDING_MODEL = process.env.OPENAI_EMBEDDING_MODEL || "text-embedding-3-small";
 export const EMBEDDING_DIM = Number(process.env.DIMENSIONS) || 3072;
 export const OPENAI_CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini";
