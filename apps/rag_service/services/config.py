@@ -18,7 +18,7 @@ class RAGConfig:
 
     embedding_model:  str = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
     keyword_model:    str = os.getenv("KEYWORD_MODEL", "all-MiniLM-L6-v2")
-    tokenizer_model:  str = os.getenv("TOKENIZER_MODEL", "gpt-4o")
+    tokenizer_model:  str = os.getenv("TOKENIZER_MODEL", "gpt-4o-mini")
 
     # Chunking controls
     chunk_size:        int = int(os.getenv("CHUNK_SIZE", "500"))

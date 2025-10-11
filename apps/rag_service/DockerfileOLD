@@ -1,8 +1,7 @@
-FROM python:3.12-slim
+﻿FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    TORCH_COMPILE_DISABLE=1
+    PYTHONDONTWRITEBYTECODE=1
 
 WORKDIR /workspace
 
@@ -31,34 +30,9 @@ RUN pip install --no-cache-dir \
 ENV HF_HOME=/workspace/models/hf-cache \
     TRANSFORMERS_CACHE=/workspace/models/hf-cache \
     SENTENCE_TRANSFORMERS_HOME=/workspace/models/hf-cache
-
-# Pre-download and warm up models to avoid meta tensor issues
 RUN python - <<'PY'
-import torch
 from sentence_transformers import SentenceTransformer
-from keybert import KeyBERT
-
-# Force eager loading (not lazy/meta tensors)
-torch.set_default_tensor_type(torch.FloatTensor)
-
-# Download and initialize SentenceTransformer
-print("[Docker Build] Loading SentenceTransformer model...")
-model = SentenceTransformer("all-MiniLM-L6-v2")
-
-# Download and initialize KeyBERT with the same model
-print("[Docker Build] Loading KeyBERT model...")
-kw_model = KeyBERT(model="all-MiniLM-L6-v2")
-
-# Warm up the model with a test extraction to ensure it's fully loaded
-test_text = "This is a test document for keyword extraction."
-try:
-    keywords = kw_model.extract_keywords(test_text, top_n=3)
-    print(f"[Docker Build] KeyBERT warmup successful: {keywords}")
-except Exception as e:
-    print(f"[Docker Build] KeyBERT warmup failed: {e}")
-    raise
-
-print("[Docker Build] All models loaded successfully")
+SentenceTransformer("all-MiniLM-L6-v2")
 PY
 
 COPY main.py ./
