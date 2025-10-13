@@ -1,0 +1,24 @@
+{
+  "name": "apiv2",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "nodemon --watch . --ext ts,json --exec bun index.ts",
+    "start": "bun index.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/cors": "^2.8.17",
+    "nodemon": "^3.1.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@langchain/openai": "^0.6.14",
+    "@pinecone-database/pinecone": "^6.1.2",
+    "cors": "^2.8.5",
+    "nodemon": "^3.1.10"
+  }
+}
