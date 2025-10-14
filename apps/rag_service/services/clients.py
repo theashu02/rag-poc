@@ -20,7 +20,7 @@ _encoding: Optional[tiktoken.Encoding] = None
 
 _MODEL_DIMENSIONS: Dict[str, int] = {
     "text-embedding-3-small": 1536,
-    "text-embedding-3-large": 3072,
+    "text-embedding-3-large": 1024,
     "text-embedding-3-large-v1": 3072,
     "text-embedding-ada-002": 1536,
 }
@@ -31,7 +31,7 @@ def _resolve_embedding_dimension() -> int:
         return config.embedding_dimension
     if config.embedding_model in _MODEL_DIMENSIONS:
         return _MODEL_DIMENSIONS[config.embedding_model]
-    return 1536
+    return 1024
 
 
 def get_openai_client() -> OpenAI:
@@ -53,7 +53,7 @@ def get_pinecone_index():
         _pc.create_index(
             name=config.index_name,
             dimension=dimension,
-            metric="cosine",
+            metric="dotproduct",
             spec=ServerlessSpec(cloud=config.pinecone_cloud, region=config.pinecone_region),
         )
         while True:

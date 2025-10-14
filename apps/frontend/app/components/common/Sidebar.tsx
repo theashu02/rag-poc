@@ -13,6 +13,7 @@ import { clearUser } from "@/store/slices/UserStoreSlice";
 import type { AppDispatch } from "@/store/store";
 import { modernToast } from "@/lib/toast";
 import Image from "next/image";
+import { ThemeToggle } from "@/components/ThemeFiles/theme-toggle";
 
 export function Sidebar() {
   const router = useRouter();
@@ -29,15 +30,13 @@ export function Sidebar() {
   const toggleMobile = () => setIsMobileOpen(!isMobileOpen);
 
   const handleSignOut = () => {
-    modernToast.success(
-      `Thanks for visiting, ${session?.user?.name || "User"}!`
-    );
+    modernToast.success(`Thanks for visiting, ${session?.user?.name || "User"}!`);
     setTimeout(() => {
       dispatch(clearUser());
       localStorage.removeItem("user-storage");
       localStorage.removeItem("app_toast_shown");
       signOut({ callbackUrl: "/" });
-    }, 1200);
+    }, 500);
   };
 
   const handleMenu = () => {
@@ -171,7 +170,8 @@ export function Sidebar() {
           </div>
 
           <div className="flex flex-col space-y-3 items-center justify-center pt-2">
-            <ModeToggle isCollapsed={isCollapsed} />
+            {/* <ModeToggle isCollapsed={isCollapsed} /> */}
+            <ThemeToggle isCollapsed={isCollapsed} />
             <Button
               variant="ghost"
               onClick={handleSignOut}

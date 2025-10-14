@@ -16,7 +16,7 @@ class RAGConfig:
     pinecone_api_key: str = os.getenv("PINECONE_API_KEY")
     index_name:       str = os.getenv("PINECONE_INDEX")
 
-    embedding_model:  str = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+    embedding_model:  str = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-large")
     keyword_model:    str = os.getenv("KEYWORD_MODEL", "all-MiniLM-L6-v2")
     tokenizer_model:  str = os.getenv("TOKENIZER_MODEL", "gpt-4o-mini")
 

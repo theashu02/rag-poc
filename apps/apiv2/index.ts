@@ -83,6 +83,7 @@ Bun.serve({
           console.log(cleanQuery, "----1");
   
           const vectors = await generateVectors(cleanQuery, 'query', 3);
+          console.log("both vectors",vectors);
 
           const HybridQuery = await searchWithVectors(vectors, namespace as string, 10);
           
